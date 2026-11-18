@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import Pagination from '@/components/Pagination';
-import { History, Search, RefreshCw, Filter, ShieldCheck, User, Building2 } from 'lucide-react';
+import { History, Search, RefreshCw, Filter, ShieldCheck, User, Building2, Power, AlertTriangle, Loader2 } from 'lucide-react';
 
 interface LogItem {
   _id: string;
@@ -30,6 +30,8 @@ export default function LogsPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [logs, setLogs] = useState<LogItem[]>([]);
   const [retentionDays, setRetentionDays] = useState(10);
+  const [loggingEnabled, setLoggingEnabled] = useState(true);
+  const [isToggling, setIsToggling] = useState(false);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState('all');
@@ -51,12 +53,41 @@ export default function LogsPage() {
           if (data.retentionDays) {
             setRetentionDays(data.retentionDays);
           }
+          if (typeof data.loggingEnabled === 'boolean') {
+            setLoggingEnabled(data.loggingEnabled);
+          }
         } else {
           setLogs([]);
         }
       })
       .catch(() => setLogs([]))
       .finally(() => setLoading(false));
+  };
+
+  const handleToggleLogging = async () => {
+    const nextState = !loggingEnabled;
+    setIsToggling(true);
+    setLoggingEnabled(nextState); // optimistic update
+
+    try {
+      const res = await fetch('/api/logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: nextState }),
+      });
+      const data = await res.json();
+      if (data.success && typeof data.loggingEnabled === 'boolean') {
+        setLoggingEnabled(data.loggingEnabled);
+      } else {
+        setLoggingEnabled(!nextState); // revert
+        alert(data.message || 'Failed to update logging setting');
+      }
+    } catch {
+      setLoggingEnabled(!nextState); // revert
+      alert('Network error while toggling logging');
+    } finally {
+      setIsToggling(false);
+    }
   };
 
   useEffect(() => {
@@ -109,11 +140,42 @@ export default function LogsPage() {
               </p>
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-semibold shrink-0">
                 <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
                 <span>{retentionDays}-Day Auto-Retention</span>
               </span>
+
+              {/* Configurable Logging ON/OFF Button */}
+              <button
+                type="button"
+                onClick={handleToggleLogging}
+                disabled={isToggling}
+                suppressHydrationWarning
+                title={
+                  loggingEnabled
+                    ? 'Activity Logging is currently ON. Click to turn OFF / pause recording logs.'
+                    : 'Activity Logging is currently OFF (Paused). Click to turn ON / start recording logs.'
+                }
+                className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-xs active:scale-95 shrink-0 ${
+                  loggingEnabled
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                    : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300'
+                } ${isToggling ? 'opacity-70 cursor-wait' : ''}`}
+              >
+                {isToggling ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                ) : (
+                  <span
+                    className={`w-2 h-2 rounded-full shrink-0 ${
+                      loggingEnabled ? 'bg-emerald-200 animate-pulse' : 'bg-rose-500'
+                    }`}
+                  />
+                )}
+                <Power className="w-3.5 h-3.5 shrink-0" />
+                <span>Logging: {loggingEnabled ? 'ON' : 'OFF'}</span>
+              </button>
+
               <button
                 type="button"
                 onClick={fetchLogs}
@@ -125,6 +187,31 @@ export default function LogsPage() {
               </button>
             </div>
           </div>
+
+          {/* Notice Banner when Logging is Paused (OFF) */}
+          {!loggingEnabled && (
+            <div className="p-3.5 rounded-3xl bg-amber-50 border border-amber-300 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-900 animate-in fade-in">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-200/80 flex items-center justify-center shrink-0 text-amber-800">
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="font-bold text-amber-950">Activity Logging is currently PAUSED (OFF)</p>
+                  <p className="text-amber-800 text-[11px] mt-0.5">
+                    New operations (orders, payments, logins, customer edits) are not being saved to the audit trail until logging is resumed.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleToggleLogging}
+                disabled={isToggling}
+                className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs active:scale-95 transition shrink-0 self-end sm:self-auto"
+              >
+                Turn ON Logging
+              </button>
+            </div>
+          )}
 
           {/* Search & Filters */}
           <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-xs">

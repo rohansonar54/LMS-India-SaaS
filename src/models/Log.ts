@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import { Setting } from './Setting';
 
 export interface ILog extends Document {
   username: string;
@@ -26,7 +27,59 @@ const LogSchema = new Schema<ILog>({
   },
 });
 
+let cachedLoggingEnabled: boolean | null = null;
+let lastCacheTime = 0;
+const CACHE_TTL_MS = 8000; // 8-second memory cache to eliminate database overhead on high-frequency actions
+
+/**
+ * Returns whether system audit logging is currently enabled.
+ * Defaults to true if no configuration record exists yet.
+ */
+export async function isLoggingActive(): Promise<boolean> {
+  const now = Date.now();
+  if (cachedLoggingEnabled !== null && now - lastCacheTime < CACHE_TTL_MS) {
+    return cachedLoggingEnabled;
+  }
+  try {
+    const doc = await Setting.findOne({ key: 'activity_logging_enabled' });
+    if (!doc) {
+      cachedLoggingEnabled = true;
+    } else {
+      cachedLoggingEnabled = doc.value !== false;
+    }
+  } catch {
+    cachedLoggingEnabled = true;
+  }
+  lastCacheTime = now;
+  return cachedLoggingEnabled;
+}
+
+/**
+ * Updates the global activity logging state (ON/OFF).
+ */
+export async function setLoggingActive(enabled: boolean): Promise<boolean> {
+  await Setting.findOneAndUpdate(
+    { key: 'activity_logging_enabled' },
+    { value: enabled, updatedAt: new Date() },
+    { upsert: true, new: true }
+  );
+  cachedLoggingEnabled = enabled;
+  lastCacheTime = Date.now();
+  return enabled;
+}
+
 export const Log: Model<ILog> = mongoose.models.Log || mongoose.model<ILog>('Log', LogSchema);
+
+// Dynamically intercept Log.create so all system activity respects the ON/OFF toggle
+const originalCreate = Log.create.bind(Log);
+// @ts-expect-error monkey-patching Mongoose create to respect runtime ON/OFF toggle
+Log.create = async function (...args: unknown[]) {
+  const active = await isLoggingActive();
+  if (!active) {
+    return null;
+  }
+  return originalCreate(...args);
+};
 
 /**
  * Automatically purges any logs older than 10 days from the database.

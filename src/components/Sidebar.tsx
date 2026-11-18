@@ -15,7 +15,6 @@ import {
   History,
   Settings,
   LogOut,
-  Sparkles,
   Wallet,
   Building2,
   X,
@@ -59,8 +58,6 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   } | null>(null);
 
   const [locations, setLocations] = useState<LocationOption[]>([]);
-  const [seeding, setSeeding] = useState(false);
-  const [seedSuccess, setSeedSuccess] = useState(false);
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -102,23 +99,6 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
       }
     } catch {
       // ignore
-    }
-  };
-
-  const handleSeed = async () => {
-    setSeeding(true);
-    try {
-      const res = await fetch('/api/seed', { method: 'POST' });
-      const data = await res.json();
-      if (data.success) {
-        setSeedSuccess(true);
-        setTimeout(() => setSeedSuccess(false), 3000);
-        window.location.reload();
-      }
-    } catch {
-      // ignore
-    } finally {
-      setSeeding(false);
     }
   };
 
@@ -255,19 +235,8 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
         )}
       </nav>
 
-      {/* Quick Demo Seeder & User Profile Footer */}
-      <div className="p-3 border-t border-slate-800 space-y-2">
-        <button
-          type="button"
-          onClick={handleSeed}
-          disabled={seeding}
-          suppressHydrationWarning
-          className="w-full flex items-center justify-center space-x-2 py-1.5 px-3 text-xs font-semibold rounded-lg bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 border border-emerald-500/30 transition-all cursor-pointer"
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>{seeding ? 'Seeding...' : seedSuccess ? '✓ Seeded INR Data!' : 'Reset Demo (₹)'}</span>
-        </button>
-
+      {/* User Profile Footer */}
+      <div className="p-3 border-t border-slate-800">
         <div className="flex items-center justify-between p-2 rounded-lg bg-slate-800/60 border border-slate-700/50">
           <div className="flex items-center space-x-2 min-w-0">
             <div className="w-7 h-7 rounded-full bg-blue-500/20 text-blue-400 font-bold flex items-center justify-center text-xs shrink-0 border border-blue-500/30">

@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
-import { Log, LOG_RETENTION_SECONDS, LOG_RETENTION_DAYS, purgeOldLogs } from '@/models/Log';
+import {
+  Log,
+  LOG_RETENTION_SECONDS,
+  LOG_RETENTION_DAYS,
+  purgeOldLogs,
+  isLoggingActive,
+  setLoggingActive,
+} from '@/models/Log';
 import { getLocationQueryFilter, requireAuth } from '@/lib/auth-helpers';
 
 export async function GET(req: Request) {
@@ -41,11 +48,41 @@ export async function GET(req: Request) {
       ];
     }
 
-    const logs = await Log.find(query).sort({ createdAt: -1 }).limit(150);
+    const [logs, loggingEnabled] = await Promise.all([
+      Log.find(query).sort({ createdAt: -1 }).limit(150),
+      isLoggingActive(),
+    ]);
+
     return NextResponse.json({
       success: true,
       retentionDays: LOG_RETENTION_DAYS,
+      loggingEnabled,
       logs,
+    });
+  } catch (error: unknown) {
+    const err = error as Error;
+    return NextResponse.json({ success: false, message: err.message }, { status: 500 });
+  }
+}
+
+/**
+ * Configure / Toggle activity logging ON or OFF
+ */
+export async function POST(req: Request) {
+  try {
+    const auth = await requireAuth();
+    if (!auth.user) return auth.response;
+
+    await connectDB();
+    const body = await req.json();
+    const targetState = Boolean(body.enabled);
+
+    const updatedState = await setLoggingActive(targetState);
+
+    return NextResponse.json({
+      success: true,
+      loggingEnabled: updatedState,
+      message: updatedState ? 'Activity logging is now ON' : 'Activity logging is now PAUSED (OFF)',
     });
   } catch (error: unknown) {
     const err = error as Error;

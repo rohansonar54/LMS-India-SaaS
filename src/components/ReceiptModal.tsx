@@ -302,7 +302,6 @@ export default function ReceiptModal({ order, onClose }: ReceiptModalProps) {
 
   // QR size by format
   const qrSize = printFormat === '58mm' ? 68 : printFormat === '80mm' ? 82 : 100;
-  const qrSizeSmall = printFormat === '58mm' ? 50 : 60;
 
   const dateStr = new Date(order.createdAt).toLocaleDateString('en-IN', { dateStyle: 'medium' });
   const timeStr = new Date(order.createdAt).toLocaleTimeString('en-IN', {
@@ -401,14 +400,30 @@ export default function ReceiptModal({ order, onClose }: ReceiptModalProps) {
 
               <div className="dashed-divider" />
 
-              <div style={{ textAlign: 'center', margin: '3px 0' }}>
-                <div style={{ fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#000000' }}>
+              <div style={{ textAlign: 'center', margin: '4px 0 3px 0' }}>
+                <div style={{ fontWeight: 700, fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#000000' }}>
                   TAX INVOICE & CASH RECEIPT
                 </div>
-                <div style={{ fontFamily: 'monospace', fontWeight: 700, color: '#000000', fontSize: '12px', marginTop: '1px' }}>
-                  Order #{order.orderNumber}
+                {/* Highlighted Order Number Badge */}
+                <div style={{
+                  display: 'inline-block',
+                  border: '1.5px solid #000000',
+                  borderRadius: '4px',
+                  padding: '2px 10px',
+                  margin: '3px auto 2px auto',
+                  background: '#ffffff',
+                }}>
+                  <span style={{
+                    fontFamily: 'monospace, "Courier New", Courier, monospace',
+                    fontWeight: 900,
+                    color: '#000000',
+                    fontSize: printFormat === '58mm' ? '15px' : '17px',
+                    letterSpacing: '1px',
+                  }}>
+                    ORDER #{order.orderNumber.replace(/^#/, '')}
+                  </span>
                 </div>
-                <div style={{ fontSize: '10px', fontWeight: 500, color: '#000000', marginTop: '1px' }}>
+                <div style={{ fontSize: '9.5px', fontWeight: 500, color: '#000000', marginTop: '1px' }}>
                   {dateStr} · {timeStr}
                 </div>
               </div>
@@ -594,7 +609,7 @@ export default function ReceiptModal({ order, onClose }: ReceiptModalProps) {
                   justifyContent: 'space-between',
                   marginBottom: '3px',
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <div>
                     <span
                       className="basket-tag-badge"
                       style={{
@@ -612,14 +627,6 @@ export default function ReceiptModal({ order, onClose }: ReceiptModalProps) {
                     >
                       BASKET TAG
                     </span>
-                    <span style={{
-                      fontFamily: 'monospace',
-                      fontWeight: 700,
-                      fontSize: '11.5px',
-                      color: '#000000',
-                    }}>
-                      #{order.orderNumber}
-                    </span>
                   </div>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: '#000000' }}>
                     {order.customerName}
@@ -627,7 +634,7 @@ export default function ReceiptModal({ order, onClose }: ReceiptModalProps) {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                  <div style={{ fontSize: '10px', lineHeight: '1.35' }}>
+                  <div style={{ fontSize: '10px', lineHeight: '1.35', flex: 1, minWidth: 0 }}>
                     <div style={{ color: '#000000', fontWeight: 500 }}>
                       Total Clothes: <strong style={{ fontWeight: 700 }}>{totalQty} items</strong>
                     </div>
@@ -638,17 +645,55 @@ export default function ReceiptModal({ order, onClose }: ReceiptModalProps) {
                       </strong>
                     </div>
                     <div style={{ color: '#000000', fontSize: '9.5px', fontWeight: 500 }}>{dateStr}</div>
-                    <div style={{ color: '#000000', fontSize: '9.5px', fontWeight: 500 }}>
+                    <div style={{ color: '#000000', fontSize: '9.5px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {order.locationName || BUSINESS_INFO.name}
                     </div>
                   </div>
-                  <div style={{
-                    padding: '2px',
-                    background: '#ffffff',
-                    border: '1px solid #000000',
-                    borderRadius: '4px',
-                  }}>
-                    <QRCodeSVG value={trackingUrl} size={qrSizeSmall} level="L" fgColor="#000000" bgColor="#ffffff" />
+                  {/* High-Visibility Bag / Order Number Badge (Replaces QR for fast identification on laundry bags) */}
+                  <div
+                    style={{
+                      border: '2.5px solid #000000',
+                      borderRadius: '6px',
+                      padding: printFormat === '58mm' ? '5px 8px' : '7px 14px',
+                      textAlign: 'center',
+                      background: '#ffffff',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      minWidth: printFormat === '58mm' ? '105px' : '135px',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: printFormat === '58mm' ? '8.5px' : '10px',
+                        fontWeight: 900,
+                        textTransform: 'uppercase',
+                        letterSpacing: '1.5px',
+                        color: '#000000',
+                        lineHeight: 1,
+                        marginBottom: '3px',
+                        borderBottom: '1.5px solid #000000',
+                        paddingBottom: '3px',
+                        width: '100%',
+                      }}
+                    >
+                      BAG NO.
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: 'monospace, "Courier New", Courier, monospace',
+                        fontSize: printFormat === '58mm' ? '18px' : '23px',
+                        fontWeight: 900,
+                        color: '#000000',
+                        lineHeight: 1.15,
+                        letterSpacing: '0.8px',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      #{order.orderNumber.replace(/^#/, '')}
+                    </span>
                   </div>
                 </div>
 
