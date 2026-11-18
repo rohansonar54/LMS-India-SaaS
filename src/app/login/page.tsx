@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Lock, User, AlertCircle, Sparkles, Building2 } from 'lucide-react';
+import { Lock, User, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -35,11 +35,6 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleQuickFill = (user: string, pass: string) => {
-    setUsername(user);
-    setPassword(pass);
   };
 
   return (
@@ -110,33 +105,6 @@ export default function LoginPage() {
             {loading ? 'Authenticating...' : 'Sign In to Workspace'}
           </button>
         </form>
-
-        {/* Demo Roles Quick Fill */}
-        <div className="mt-6 pt-5 border-t border-slate-100" suppressHydrationWarning>
-          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider text-center mb-2.5">
-            Test Demo Role Accounts
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              suppressHydrationWarning
-              onClick={() => handleQuickFill('admin', 'admin')}
-              className="p-2 rounded-xl bg-slate-50 hover:bg-blue-50 border border-slate-200 text-left transition"
-            >
-              <p className="text-xs font-bold text-slate-800">Super Admin</p>
-              <p className="text-[10px] text-slate-500 font-mono">admin / admin</p>
-            </button>
-            <button
-              type="button"
-              suppressHydrationWarning
-              onClick={() => handleQuickFill('staff_mumbai', 'staff123')}
-              className="p-2 rounded-xl bg-slate-50 hover:bg-blue-50 border border-slate-200 text-left transition"
-            >
-              <p className="text-xs font-bold text-slate-800">Mumbai Staff</p>
-              <p className="text-[10px] text-slate-500 font-mono">staff_mumbai</p>
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );
