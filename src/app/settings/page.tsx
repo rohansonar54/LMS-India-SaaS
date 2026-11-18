@@ -334,7 +334,7 @@ export default function SettingsPage() {
                 }`}
               >
                 <Layers className="w-4 h-4" />
-                <span>Per-Kg Weight Packages ({prices.length})</span>
+                <span>Bulk & Measurement Rates ({prices.length})</span>
               </button>
             </div>
 
@@ -364,7 +364,7 @@ export default function SettingsPage() {
                 className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center space-x-1.5 transition shadow-xs"
               >
                 <Plus className="w-4 h-4" />
-                <span>+ Add Weight Package</span>
+                <span>+ Add Package / Rate</span>
               </button>
             )}
           </div>
@@ -545,11 +545,11 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* TAB 3: Per-Kg Weight Packages */}
+          {/* TAB 3: Per-Kg Weight & Measurement Packages */}
           {activeTab === 'weight' && (
             <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
               <div className="p-5 border-b border-slate-200">
-                <h3 className="font-bold text-slate-800 text-sm">Bulk Laundry Per-Kg Rates</h3>
+                <h3 className="font-bold text-slate-800 text-sm">Bulk Laundry & Measurement Rates (Kg, SqFt, Meter, Pcs)</h3>
                 <p className="text-xs text-slate-500">Configured packages are available as quick-add items during order booking</p>
               </div>
 
@@ -570,7 +570,7 @@ export default function SettingsPage() {
                       </tr>
                     ) : prices.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="py-8 text-center text-slate-400">No bulk weight packages configured. Click &quot;+ Add Weight Package&quot; above.</td>
+                        <td colSpan={4} className="py-8 text-center text-slate-400">No packages configured. Click &quot;+ Add Package / Rate&quot; above.</td>
                       </tr>
                     ) : (
                       prices.map((p) => (
@@ -799,9 +799,9 @@ export default function SettingsPage() {
           <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 border border-slate-200 animate-in fade-in zoom-in-95 space-y-4">
             <div>
               <h3 className="font-bold text-slate-900 text-base">
-                {editingWeightId ? 'Edit Weight Package' : 'Add New Weight Package'}
+                {editingWeightId ? 'Edit Package / Rate' : 'Add New Package / Rate'}
               </h3>
-              <p className="text-xs text-slate-500">Configure package name, billing unit, and rate in ₹</p>
+              <p className="text-xs text-slate-500">Configure package name, billing unit (kg, sqft, pcs, meter), and rate in ₹</p>
             </div>
 
             <form onSubmit={handleSaveWeight} className="space-y-3">
@@ -810,7 +810,7 @@ export default function SettingsPage() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Wash & Fold, Woolen Blankets"
+                  placeholder="e.g. Wash & Fold, Carpets / Curtains, Blankets"
                   value={weightName}
                   onChange={(e) => setWeightName(e.target.value)}
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -827,8 +827,9 @@ export default function SettingsPage() {
                   >
                     <option value="kg">kg (Kilogram)</option>
                     <option value="pcs">pcs (Pieces)</option>
-                    <option value="g">g (Grams)</option>
+                    <option value="sqft">sqft (Square Feet)</option>
                     <option value="meter">meter</option>
+                    <option value="g">g (Grams)</option>
                   </select>
                 </div>
                 <div>

@@ -21,6 +21,9 @@ export async function GET(req: Request) {
     const paymentStatus = searchParams.get('paymentStatus');
     const search = searchParams.get('search')?.trim();
     const sort = searchParams.get('sort') || 'newest';
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
+    const view = searchParams.get('view'); // 'table' or 'queue'
 
     const locationFilter = await getLocationQueryFilter(req);
     const filter: Record<string, unknown> = { ...locationFilter };
@@ -34,11 +37,41 @@ export async function GET(req: Request) {
     }
 
     if (search) {
-      filter.$or = [
+      const orConditions: any[] = [
         { orderNumber: { $regex: search, $options: 'i' } },
         { customerName: { $regex: search, $options: 'i' } },
         { customerContact: { $regex: search, $options: 'i' } },
+        { locationName: { $regex: search, $options: 'i' } },
       ];
+
+      // If user typed a date (e.g. "2026-11-18" or "18 Nov 2026")
+      const parsedDate = new Date(search);
+      if (!isNaN(parsedDate.getTime()) && search.trim().length >= 6) {
+        const startOfDay = new Date(parsedDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(parsedDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        orConditions.push({
+          createdAt: { $gte: startOfDay, $lte: endOfDay },
+        });
+      }
+
+      filter.$or = orConditions;
+    }
+
+    if (startDate || endDate) {
+      const dateFilter: Record<string, Date> = {};
+      if (startDate) {
+        const start = new Date(startDate);
+        if (!isNaN(start.getTime())) dateFilter.$gte = start;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        if (!isNaN(end.getTime())) dateFilter.$lte = end;
+      }
+      if (Object.keys(dateFilter).length > 0) {
+        filter.createdAt = dateFilter;
+      }
     }
 
     let sortOptions: Record<string, 1 | -1> = { createdAt: -1 };
@@ -53,6 +86,9 @@ export async function GET(req: Request) {
 
     if (limitParam) {
       orders = await Order.find(filter).sort(sortOptions).limit(Number(limitParam) || 10).lean();
+    } else if (view === 'table' || startDate || endDate) {
+      // Full orders table list
+      orders = await Order.find(filter).sort(sortOptions).lean();
     } else if (status === 'claimed') {
       // Delivered section: limit to newest 150 orders
       orders = await Order.find(filter).sort({ createdAt: -1 }).limit(150).lean();

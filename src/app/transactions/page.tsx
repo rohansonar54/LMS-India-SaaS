@@ -758,7 +758,7 @@ export default function TransactionsPage() {
                   {bulkPackages.length > 0 && (
                     <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 scrollbar-thin">
                       <span className="text-[11px] text-amber-700 shrink-0 font-bold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
-                        ⚖️ Bulk / Per-Kg:
+                        ⚖️ Packages / Units:
                       </span>
                       {bulkPackages.map((pkg) => (
                         <button
@@ -875,7 +875,9 @@ export default function TransactionsPage() {
 
                           {/* Quantity with +/- stepper */}
                           <div className="col-span-3">
-                            <label className="text-[10px] text-slate-400 font-semibold uppercase block mb-0.5">Qty / Wt</label>
+                            <label className="text-[10px] text-slate-400 font-semibold uppercase block mb-0.5">
+                              {bulkPkg ? `Qty (${bulkPkg.unit})` : 'Qty / Wt'}
+                            </label>
                             <div className="flex items-center border border-slate-300 rounded-xl overflow-hidden bg-slate-50">
                               <button
                                 type="button"

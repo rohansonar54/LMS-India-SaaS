@@ -19,6 +19,7 @@ import {
   Building2,
   X,
   ChevronDown,
+  ShoppingBag,
 } from 'lucide-react';
 import { useSidebar } from '@/context/SidebarContext';
 
@@ -107,6 +108,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
     { label: 'POS Billing', href: '/transactions', icon: CreditCard },
     { label: 'Query / Queue Board', href: '/queue', icon: Clock },
     { label: 'Money & Balances', href: '/payments', icon: Wallet },
+    { label: 'Orders', href: '/orders', icon: ShoppingBag },
     { label: 'Customers', href: '/customers', icon: Users },
     { label: 'Supplies / Stock', href: '/supplies', icon: Package },
     { label: 'Track by QR', href: '/tracking', icon: QrCode },
