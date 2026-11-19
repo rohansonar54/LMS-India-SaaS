@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import Pagination from '@/components/Pagination';
+import BlurLoaderOverlay from '@/components/BlurLoaderOverlay';
 import { formatINR } from '@/lib/currency';
 import { Package, Plus, ArrowDownLeft, ArrowUpRight, AlertTriangle, Trash2, Building2 } from 'lucide-react';
 
@@ -142,75 +143,92 @@ export default function SuppliesPage() {
           </div>
 
           {/* Supplies Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {supplies
-              .slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
-              .map((s) => {
-              const isLow = s.stock < 20;
-              return (
-                <div
-                  key={s._id}
-                  className={`bg-white rounded-3xl p-5 border shadow-xs transition space-y-3 ${
-                    isLow ? 'border-amber-300 ring-2 ring-amber-100' : 'border-slate-200'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="p-2.5 rounded-2xl bg-blue-50 text-blue-600">
-                      <Package className="w-5 h-5" />
-                    </div>
-                    {isLow && (
-                      <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold uppercase flex items-center space-x-1">
-                        <AlertTriangle className="w-3 h-3" />
-                        <span>Low Stock</span>
-                      </span>
-                    )}
-                  </div>
-
-                  <div>
-                    <h4 className="font-bold text-slate-900 text-sm">{s.name}</h4>
-                    <p className="text-xs text-slate-500 font-medium">Cost: {formatINR(s.cost)} / {s.unit}</p>
-                    {s.locationName && (
-                      <p className="text-[10px] text-slate-400 flex items-center space-x-1 mt-0.5">
-                        <Building2 className="w-3 h-3" />
-                        <span>{s.locationName}</span>
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="pt-1 flex justify-between items-baseline">
-                    <span className="text-xs text-slate-400">Available:</span>
-                    <span className="font-mono font-black text-2xl text-slate-900">
-                      {s.stock} <span className="text-xs font-normal text-slate-500">{s.unit}</span>
-                    </span>
-                  </div>
-
-                  {/* Stock In / Out Buttons */}
-                  <div className="pt-2 flex items-center space-x-2 border-t border-slate-100">
-                    <button
-                      onClick={() => handleOpenAdjust(s, 'stock-in')}
-                      className="flex-1 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-xs flex items-center justify-center space-x-1 transition"
-                    >
-                      <ArrowDownLeft className="w-3.5 h-3.5" />
-                      <span>Stock In</span>
-                    </button>
-                    <button
-                      onClick={() => handleOpenAdjust(s, 'stock-out')}
-                      className="flex-1 py-1.5 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 font-bold text-xs flex items-center justify-center space-x-1 transition"
-                    >
-                      <ArrowUpRight className="w-3.5 h-3.5" />
-                      <span>Deduct</span>
-                    </button>
-                    <button
-                      onClick={() => handleDelete(s._id, s.name)}
-                      className="p-1.5 text-slate-300 hover:text-rose-600 rounded-lg"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+          <BlurLoaderOverlay
+            loading={loading}
+            text="Loading Supplies..."
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 min-h-[220px]">
+              {supplies.length === 0 ? (
+                <div className="col-span-full py-16 text-center bg-white rounded-3xl border border-slate-200">
+                  <Package className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                  <p className="text-sm font-bold text-slate-700">
+                    {loading ? 'Preparing store stock...' : 'No inventory items registered'}
+                  </p>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {loading ? 'Please wait a moment' : 'Click "+ Add Inventory Item" above to get started.'}
+                  </p>
                 </div>
-              );
-            })}
-          </div>
+              ) : (
+                supplies
+                  .slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+                  .map((s) => {
+                  const isLow = s.stock < 20;
+                  return (
+                    <div
+                      key={s._id}
+                      className={`bg-white rounded-3xl p-5 border shadow-xs transition space-y-3 ${
+                        isLow ? 'border-amber-300 ring-2 ring-amber-100' : 'border-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="p-2.5 rounded-2xl bg-blue-50 text-blue-600">
+                          <Package className="w-5 h-5" />
+                        </div>
+                        {isLow && (
+                          <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold uppercase flex items-center space-x-1">
+                            <AlertTriangle className="w-3 h-3" />
+                            <span>Low Stock</span>
+                          </span>
+                        )}
+                      </div>
+
+                      <div>
+                        <h4 className="font-bold text-slate-900 text-sm">{s.name}</h4>
+                        <p className="text-xs text-slate-500 font-medium">Cost: {formatINR(s.cost)} / {s.unit}</p>
+                        {s.locationName && (
+                          <p className="text-[10px] text-slate-400 flex items-center space-x-1 mt-0.5">
+                            <Building2 className="w-3 h-3" />
+                            <span>{s.locationName}</span>
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="pt-1 flex justify-between items-baseline">
+                        <span className="text-xs text-slate-400">Available:</span>
+                        <span className="font-mono font-black text-2xl text-slate-900">
+                          {s.stock} <span className="text-xs font-normal text-slate-500">{s.unit}</span>
+                        </span>
+                      </div>
+
+                      {/* Stock In / Out Buttons */}
+                      <div className="pt-2 flex items-center space-x-2 border-t border-slate-100">
+                        <button
+                          onClick={() => handleOpenAdjust(s, 'stock-in')}
+                          className="flex-1 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-xs flex items-center justify-center space-x-1 transition"
+                        >
+                          <ArrowDownLeft className="w-3.5 h-3.5" />
+                          <span>Stock In</span>
+                        </button>
+                        <button
+                          onClick={() => handleOpenAdjust(s, 'stock-out')}
+                          className="flex-1 py-1.5 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 font-bold text-xs flex items-center justify-center space-x-1 transition"
+                        >
+                          <ArrowUpRight className="w-3.5 h-3.5" />
+                          <span>Deduct</span>
+                        </button>
+                        <button
+                          onClick={() => handleDelete(s._id, s.name)}
+                          className="p-1.5 text-slate-300 hover:text-rose-600 rounded-lg"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </BlurLoaderOverlay>
 
           {/* Pagination Controls */}
           {!loading && supplies.length > 0 && (

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { SidebarProvider } from "@/context/SidebarContext";
+import { TabLoadingProvider } from "@/context/TabLoadingContext";
 
 export const metadata: Metadata = {
   title: "LMS - Laundry Management System with QRCode",
@@ -16,7 +17,9 @@ export default function RootLayout({
     <html lang="en" className="h-full antialiased" suppressHydrationWarning>
       <body className="min-h-full flex flex-col font-sans bg-slate-50 text-slate-900" suppressHydrationWarning>
         <SidebarProvider>
-          {children}
+          <TabLoadingProvider>
+            {children}
+          </TabLoadingProvider>
         </SidebarProvider>
       </body>
     </html>

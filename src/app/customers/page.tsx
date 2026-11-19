@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import Pagination from '@/components/Pagination';
+import BlurLoaderOverlay from '@/components/BlurLoaderOverlay';
 import { formatINR } from '@/lib/currency';
 import { Users, Plus, Search, Edit2, Trash2, Phone, MapPin, Building2, Wallet, AlertCircle } from 'lucide-react';
 
@@ -168,70 +169,73 @@ export default function CustomersPage() {
 
           {/* Customers Table */}
           <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px] tracking-wider">
-                    <th className="py-3 px-4">Customer Name</th>
-                    <th className="py-3 px-4">Contact Phone</th>
-                    <th className="py-3 px-4">Branch Location</th>
-                    <th className="py-3 px-4">Address</th>
-                    <th className="py-3 px-4">Outstanding (₹)</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {loading ? (
-                    <tr>
-                      <td colSpan={6} className="py-8 text-center text-slate-400">Loading customers...</td>
+            <BlurLoaderOverlay
+              loading={loading}
+              text="Loading Customers..."
+            >
+              <div className="overflow-x-auto min-h-[220px]">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px] tracking-wider">
+                      <th className="py-3 px-4">Customer Name</th>
+                      <th className="py-3 px-4">Contact Phone</th>
+                      <th className="py-3 px-4">Branch Location</th>
+                      <th className="py-3 px-4">Address</th>
+                      <th className="py-3 px-4">Outstanding (₹)</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
                     </tr>
-                  ) : filtered.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="py-8 text-center text-slate-400">No customers found.</td>
-                    </tr>
-                  ) : (
-                    filtered
-                      .slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
-                      .map((c) => (
-                        <tr key={c._id} className="hover:bg-slate-50 transition">
-                          <td className="py-3 px-4 font-bold text-slate-900">{c.fullname}</td>
-                          <td className="py-3 px-4 font-mono text-slate-700 font-medium">{c.contact}</td>
-                          <td className="py-3 px-4">
-                            <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-semibold">
-                              <Building2 className="w-3 h-3" />
-                              <span>{c.locationName || 'Central Branch'}</span>
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-slate-500 truncate max-w-xs">{c.address || '-'}</td>
-                          <td className="py-3 px-4 font-mono font-bold">
-                            {c.outstandingBalance ? (
-                              <span className="text-rose-600">{formatINR(c.outstandingBalance)}</span>
-                            ) : (
-                              <span className="text-emerald-600">₹0 (Clear)</span>
-                            )}
-                          </td>
-                          <td className="py-3 px-4 text-right">
-                            <div className="flex items-center justify-end space-x-1">
-                              <button
-                                onClick={() => handleOpenEdit(c)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition"
-                              >
-                                <Edit2 className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => handleDelete(c._id, c.fullname)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-slate-100 transition"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filtered.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-12 text-center text-slate-400">
+                          {loading ? 'Preparing customer list...' : 'No customers found.'}
+                        </td>
+                      </tr>
+                    ) : (
+                      filtered
+                        .slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+                        .map((c) => (
+                          <tr key={c._id} className="hover:bg-slate-50 transition">
+                            <td className="py-3 px-4 font-bold text-slate-900">{c.fullname}</td>
+                            <td className="py-3 px-4 font-mono text-slate-700 font-medium">{c.contact}</td>
+                            <td className="py-3 px-4">
+                              <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-semibold">
+                                <Building2 className="w-3 h-3" />
+                                <span>{c.locationName || 'Central Branch'}</span>
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-slate-500 truncate max-w-xs">{c.address || '-'}</td>
+                            <td className="py-3 px-4 font-mono font-bold">
+                              {c.outstandingBalance ? (
+                                <span className="text-rose-600">{formatINR(c.outstandingBalance)}</span>
+                              ) : (
+                                <span className="text-emerald-600">₹0 (Clear)</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-right">
+                              <div className="flex items-center justify-end space-x-1">
+                                <button
+                                  onClick={() => handleOpenEdit(c)}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(c._id, c.fullname)}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-slate-100 transition"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </BlurLoaderOverlay>
 
             {/* Pagination Controls */}
             {!loading && filtered.length > 0 && (
@@ -281,11 +285,10 @@ export default function CustomersPage() {
                   placeholder="e.g. 9820011223"
                   value={contact}
                   onChange={(e) => setContact(e.target.value)}
-                  className={`w-full px-3 py-2 text-xs rounded-xl border font-mono transition ${
-                    !editingId && existingCustMatch
-                      ? 'border-amber-400 bg-amber-50/30 ring-2 ring-amber-300/50'
-                      : 'border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500'
-                  }`}
+                  className={`w-full px-3 py-2 text-xs rounded-xl border font-mono transition ${!editingId && existingCustMatch
+                    ? 'border-amber-400 bg-amber-50/30 ring-2 ring-amber-300/50'
+                    : 'border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500'
+                    }`}
                 />
 
                 {/* Instant Existing Customer Detected Alert & One-Click Edit */}
@@ -338,11 +341,10 @@ export default function CustomersPage() {
                   type="submit"
                   disabled={!editingId && !!existingCustMatch}
                   title={!editingId && existingCustMatch ? 'Mobile number already belongs to an existing customer. Click "Edit Customer" above.' : ''}
-                  className={`px-4 py-2 rounded-xl text-white text-xs font-bold shadow-sm transition ${
-                    !editingId && !!existingCustMatch
-                      ? 'opacity-40 cursor-not-allowed bg-slate-400'
-                      : 'bg-blue-600 hover:bg-blue-700 active:scale-95'
-                  }`}
+                  className={`px-4 py-2 rounded-xl text-white text-xs font-bold shadow-sm transition ${!editingId && !!existingCustMatch
+                    ? 'opacity-40 cursor-not-allowed bg-slate-400'
+                    : 'bg-blue-600 hover:bg-blue-700 active:scale-95'
+                    }`}
                 >
                   Save Customer
                 </button>

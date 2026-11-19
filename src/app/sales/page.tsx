@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import Pagination from '@/components/Pagination';
+import BlurLoaderOverlay from '@/components/BlurLoaderOverlay';
 import { formatINR } from '@/lib/currency';
 import {
   exportReportToExcel,
@@ -63,7 +64,7 @@ export default function SalesReportsPage() {
           window.location.href = '/access-denied';
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const fetchReport = () => {
@@ -135,8 +136,8 @@ export default function SalesReportsPage() {
         selectedReport === 'weekly_revenue'
           ? 'week'
           : selectedReport === 'monthly_revenue'
-          ? 'month'
-          : 'year';
+            ? 'month'
+            : 'year';
       const totalRev = reportData.reduce((s: number, r: any) => s + (r.amount || 0), 0);
       return {
         columns: [
@@ -402,22 +403,22 @@ export default function SalesReportsPage() {
                 {['order_summary', 'pending_orders', 'completed_orders', 'outstanding_payments'].includes(
                   selectedReport
                 ) && (
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Status</label>
-                    <select
-                      value={orderStatus}
-                      onChange={(e) => setOrderStatus(e.target.value)}
-                      className="px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 bg-white font-medium text-slate-800"
-                    >
-                      <option value="all">All Statuses</option>
-                      <option value="pending">Pending</option>
-                      <option value="washing_drying">Washing & Drying</option>
-                      <option value="ironing">Ironing</option>
-                      <option value="done">Done / Ready</option>
-                      <option value="claimed">Delivered</option>
-                    </select>
-                  </div>
-                )}
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Status</label>
+                      <select
+                        value={orderStatus}
+                        onChange={(e) => setOrderStatus(e.target.value)}
+                        className="px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 bg-white font-medium text-slate-800"
+                      >
+                        <option value="all">All Statuses</option>
+                        <option value="pending">Pending</option>
+                        <option value="washing_drying">Washing & Drying</option>
+                        <option value="ironing">Ironing</option>
+                        <option value="done">Done / Ready</option>
+                        <option value="claimed">Delivered</option>
+                      </select>
+                    </div>
+                  )}
               </div>
 
               {/* Action Buttons: Excel, CSV & Print */}
@@ -464,23 +465,23 @@ export default function SalesReportsPage() {
               </span>
             </div>
 
-            <div className="p-4 overflow-x-auto">
-              {loading ? (
-                <div className="py-16 text-center text-slate-400 text-xs flex flex-col items-center justify-center">
-                  <RefreshCw className="w-6 h-6 animate-spin text-blue-600 mb-2" />
-                  <span>Generating report data...</span>
-                </div>
-              ) : !reportData ||
-                (Array.isArray(reportData) && reportData.length === 0) ||
-                (selectedReport === 'order_summary' &&
-                  (!reportData.orders || reportData.orders.length === 0)) ? (
-                <div className="py-16 text-center text-slate-400 text-xs">
-                  No records found matching filters for this period.
-                </div>
-              ) : (
-                renderReportTable(selectedReport, reportData, reportPage, setReportPage)
-              )}
-            </div>
+            <BlurLoaderOverlay
+              loading={loading}
+              text="Loading Analytics..."
+            >
+              <div className="p-4 overflow-x-auto min-h-[260px]">
+                {!reportData ||
+                  (Array.isArray(reportData) && reportData.length === 0) ||
+                  (selectedReport === 'order_summary' &&
+                    (!reportData.orders || reportData.orders.length === 0)) ? (
+                  <div className="py-16 text-center text-slate-400 text-xs">
+                    {loading ? 'Preparing report data...' : 'No records found matching filters for this period.'}
+                  </div>
+                ) : (
+                  renderReportTable(selectedReport, reportData, reportPage, setReportPage)
+                )}
+              </div>
+            </BlurLoaderOverlay>
           </div>
         </main>
       </div>

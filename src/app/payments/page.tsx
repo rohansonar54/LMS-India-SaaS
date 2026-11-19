@@ -5,6 +5,7 @@ import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import ReceiptModal, { ReceiptOrder } from '@/components/ReceiptModal';
 import Pagination from '@/components/Pagination';
+import BlurLoaderOverlay from '@/components/BlurLoaderOverlay';
 import { formatINR } from '@/lib/currency';
 import {
   Wallet,
@@ -245,21 +246,19 @@ export default function PaymentsPage() {
               <div className="flex items-center space-x-1.5 p-1 rounded-2xl bg-slate-100">
                 <button
                   onClick={() => setActiveTab('balances')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
-                    activeTab === 'balances'
-                      ? 'bg-white text-blue-600 shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition ${activeTab === 'balances'
+                    ? 'bg-white text-blue-600 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                    }`}
                 >
                   Customer Outstanding ({customerBalances.length})
                 </button>
                 <button
                   onClick={() => setActiveTab('history')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
-                    activeTab === 'history'
-                      ? 'bg-white text-blue-600 shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition ${activeTab === 'history'
+                    ? 'bg-white text-blue-600 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                    }`}
                 >
                   Payment History ({payments.length})
                 </button>
@@ -317,63 +316,64 @@ export default function PaymentsPage() {
                   <span className="text-xs text-slate-500">Click &quot;Collect&quot; to clear outstanding dues</span>
                 </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px] tracking-wider">
-                        <th className="py-3 px-4">Customer Name</th>
-                        <th className="py-3 px-4">Contact Phone</th>
-                        <th className="py-3 px-4">Unpaid Orders</th>
-                        <th className="py-3 px-4">Total Balance (₹)</th>
-                        <th className="py-3 px-4 text-right">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {loading ? (
-                        <tr>
-                          <td colSpan={5} className="py-8 text-center text-slate-400">Loading customer ledger...</td>
+                <BlurLoaderOverlay
+                  loading={loading}
+                  text="Loading Ledger..."
+                >
+                  <div className="overflow-x-auto min-h-[200px]">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px] tracking-wider">
+                          <th className="py-3 px-4">Customer Name</th>
+                          <th className="py-3 px-4">Contact Phone</th>
+                          <th className="py-3 px-4">Unpaid Orders</th>
+                          <th className="py-3 px-4">Total Balance (₹)</th>
+                          <th className="py-3 px-4 text-right">Action</th>
                         </tr>
-                      ) : filteredBalances.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="py-8 text-center text-emerald-600 font-semibold">
-                            ✓ No outstanding balances found! All customer orders are fully cleared.
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredBalances
-                          .slice((balancesPage - 1) * PAGE_SIZE, balancesPage * PAGE_SIZE)
-                          .map((item) => (
-                            <tr key={item.customerId} className="hover:bg-slate-50 transition">
-                              <td className="py-3 px-4 font-bold text-slate-900">{item.customerName}</td>
-                              <td className="py-3 px-4 text-slate-600 font-mono">{item.contact || 'N/A'}</td>
-                              <td className="py-3 px-4">
-                                <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-[10px]">
-                                  {item.unpaidOrdersCount} order(s)
-                                </span>
-                              </td>
-                              <td className="py-3 px-4 font-mono font-black text-rose-600 text-sm">
-                                {formatINR(item.totalBalance)}
-                              </td>
-                              <td className="py-3 px-4 text-right">
-                                {/* Find first unpaid order for this customer */}
-                                {(() => {
-                                  const order = ordersWithBalance.find((o) => o.customerId.toString() === item.customerId);
-                                  return order ? (
-                                    <button
-                                      onClick={() => handleOpenCollectModal(order)}
-                                      className="px-3 py-1.5 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 shadow-xs transition"
-                                    >
-                                      Collect ₹
-                                    </button>
-                                  ) : null;
-                                })()}
-                              </td>
-                            </tr>
-                          ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {filteredBalances.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="py-12 text-center text-slate-400">
+                              {loading ? 'Preparing ledger records...' : '✓ No outstanding balances found! All customer orders are fully cleared.'}
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredBalances
+                            .slice((balancesPage - 1) * PAGE_SIZE, balancesPage * PAGE_SIZE)
+                            .map((item) => (
+                              <tr key={item.customerId} className="hover:bg-slate-50 transition">
+                                <td className="py-3 px-4 font-bold text-slate-900">{item.customerName}</td>
+                                <td className="py-3 px-4 text-slate-600 font-mono">{item.contact || 'N/A'}</td>
+                                <td className="py-3 px-4">
+                                  <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-[10px]">
+                                    {item.unpaidOrdersCount} order(s)
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 font-mono font-black text-rose-600 text-sm">
+                                  {formatINR(item.totalBalance)}
+                                </td>
+                                <td className="py-3 px-4 text-right">
+                                  {/* Find first unpaid order for this customer */}
+                                  {(() => {
+                                    const order = ordersWithBalance.find((o) => o.customerId.toString() === item.customerId);
+                                    return order ? (
+                                      <button
+                                        onClick={() => handleOpenCollectModal(order)}
+                                        className="px-3 py-1.5 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 shadow-xs transition"
+                                      >
+                                        Collect ₹
+                                      </button>
+                                    ) : null;
+                                  })()}
+                                </td>
+                              </tr>
+                            ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </BlurLoaderOverlay>
 
                 {/* Pagination for Balances */}
                 {!loading && filteredBalances.length > 0 && (
@@ -433,56 +433,59 @@ export default function PaymentsPage() {
                 <span className="text-xs text-slate-500">Immutable ledger of cash, UPI, and card receipts</span>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px] tracking-wider">
-                      <th className="py-3 px-4">Date & Time</th>
-                      <th className="py-3 px-4">Order #</th>
-                      <th className="py-3 px-4">Customer</th>
-                      <th className="py-3 px-4">Amount</th>
-                      <th className="py-3 px-4">Mode</th>
-                      <th className="py-3 px-4">Ref / Notes</th>
-                      <th className="py-3 px-4">Staff</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {loading ? (
-                      <tr>
-                        <td colSpan={7} className="py-8 text-center text-slate-400">Loading payment ledger...</td>
+              <BlurLoaderOverlay
+                loading={loading}
+                text="Loading Payments..."
+              >
+                <div className="overflow-x-auto min-h-[200px]">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px] tracking-wider">
+                        <th className="py-3 px-4">Date & Time</th>
+                        <th className="py-3 px-4">Order #</th>
+                        <th className="py-3 px-4">Customer</th>
+                        <th className="py-3 px-4">Amount</th>
+                        <th className="py-3 px-4">Mode</th>
+                        <th className="py-3 px-4">Ref / Notes</th>
+                        <th className="py-3 px-4">Staff</th>
                       </tr>
-                    ) : filteredPayments.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="py-8 text-center text-slate-400">No payment records found.</td>
-                      </tr>
-                    ) : (
-                      filteredPayments
-                        .slice((historyPage - 1) * PAGE_SIZE, historyPage * PAGE_SIZE)
-                        .map((p) => (
-                          <tr key={p._id} className="hover:bg-slate-50 transition">
-                            <td className="py-3 px-4 text-slate-600">
-                              {p.createdAt ? new Date(p.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
-                            </td>
-                            <td className="py-3 px-4 font-mono font-bold text-blue-600">#{p.orderNumber}</td>
-                            <td className="py-3 px-4 font-semibold text-slate-800">{p.customerName}</td>
-                            <td className="py-3 px-4 font-mono font-black text-emerald-600 text-sm">
-                              {formatINR(p.amount)}
-                            </td>
-                            <td className="py-3 px-4">
-                              <span className="px-2 py-0.5 rounded-lg bg-blue-50 text-blue-700 font-bold text-[11px] border border-blue-200">
-                                {p.method}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4 text-slate-500 font-mono text-[11px]">
-                              {p.referenceNumber || p.notes || (p.isAdvance ? 'Advance' : 'Handover')}
-                            </td>
-                            <td className="py-3 px-4 text-slate-700 font-medium">{p.staffName || 'Staff'}</td>
-                          </tr>
-                        ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredPayments.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="py-12 text-center text-slate-400">
+                            {loading ? 'Preparing payment records...' : 'No payment records found.'}
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredPayments
+                          .slice((historyPage - 1) * PAGE_SIZE, historyPage * PAGE_SIZE)
+                          .map((p) => (
+                            <tr key={p._id} className="hover:bg-slate-50 transition">
+                              <td className="py-3 px-4 text-slate-600">
+                                {p.createdAt ? new Date(p.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
+                              </td>
+                              <td className="py-3 px-4 font-mono font-bold text-blue-600">#{p.orderNumber}</td>
+                              <td className="py-3 px-4 font-semibold text-slate-800">{p.customerName}</td>
+                              <td className="py-3 px-4 font-mono font-black text-emerald-600 text-sm">
+                                {formatINR(p.amount)}
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className="px-2 py-0.5 rounded-lg bg-blue-50 text-blue-700 font-bold text-[11px] border border-blue-200">
+                                  {p.method}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-slate-500 font-mono text-[11px]">
+                                {p.referenceNumber || p.notes || (p.isAdvance ? 'Advance' : 'Handover')}
+                              </td>
+                              <td className="py-3 px-4 text-slate-700 font-medium">{p.staffName || 'Staff'}</td>
+                            </tr>
+                          ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </BlurLoaderOverlay>
 
               {/* Pagination for History */}
               {!loading && filteredPayments.length > 0 && (
@@ -550,11 +553,10 @@ export default function PaymentsPage() {
                       key={m}
                       type="button"
                       onClick={() => setPayMethod(m)}
-                      className={`py-2 text-xs font-bold rounded-xl border transition ${
-                        payMethod === m
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                          : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
-                      }`}
+                      className={`py-2 text-xs font-bold rounded-xl border transition ${payMethod === m
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                        : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                        }`}
                     >
                       {m}
                     </button>

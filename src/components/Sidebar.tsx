@@ -22,6 +22,7 @@ import {
   ShoppingBag,
 } from 'lucide-react';
 import { useSidebar } from '@/context/SidebarContext';
+import { useTabLoading } from '@/context/TabLoadingContext';
 
 interface SidebarProps {
   mobileOpen?: boolean;
@@ -38,6 +39,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { desktopOpen, mobileOpen: ctxMobileOpen, closeSidebar } = useSidebar();
+  const { setTabLoading } = useTabLoading();
 
   const isMobileOpen = mobileOpen !== undefined ? mobileOpen : ctxMobileOpen;
 
@@ -190,6 +192,9 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
               key={item.href}
               href={item.href}
               onClick={() => {
+                if (item.href !== pathname && item.href !== '/queue') {
+                  setTabLoading(true, `Loading ${item.label}...`);
+                }
                 if (typeof window !== 'undefined' && window.innerWidth < 768) {
                   handleClose();
                 }
