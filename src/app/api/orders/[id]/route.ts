@@ -5,7 +5,7 @@ import { Payment } from '@/models/Payment';
 import { Customer } from '@/models/Customer';
 import { Log } from '@/models/Log';
 import { requireAuth } from '@/lib/auth-helpers';
-import { normalizeWorkflowStages } from '@/lib/workflow';
+import { normalizeWorkflowStages, isProcessingStage } from '@/lib/workflow';
 
 export async function GET(
   req: Request,
@@ -197,11 +197,11 @@ export async function DELETE(
 
     // Authorization:
     // Admin (level === 0) can delete any order.
-    // Staff (level > 0) can delete if order is in Received stage ('pending' or 'processing') and in their location.
+    // Staff (level > 0) can delete if order is in Processing section and in their location.
     if (user.level > 0) {
-      if (order.status !== 'pending' && order.status !== 'processing') {
+      if (!isProcessingStage(order.status)) {
         return NextResponse.json(
-          { success: false, message: 'Staff can only delete mistaken orders in the Received section' },
+          { success: false, message: 'Staff can only delete mistaken orders in the Processing section' },
           { status: 403 }
         );
       }

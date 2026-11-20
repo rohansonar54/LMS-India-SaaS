@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import Pagination from '@/components/Pagination';
@@ -82,26 +83,65 @@ function getDateRangeForPreset(preset: DatePreset): DateRange {
   return { start: null, end: null };
 }
 
-export default function OrdersPage() {
+function OrdersContent() {
+  const searchParams = useSearchParams();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [orders, setOrders] = useState<ReceiptOrder[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Preset filter state (default to 'all')
-  const [datePreset, setDatePreset] = useState<DatePreset>('all');
+  // Read URL search params
+  const paramStatus = searchParams.get('status') || 'all';
+  const paramDatePreset = (searchParams.get('datePreset') as DatePreset) || 'all';
+  const paramPayment = searchParams.get('paymentStatus') || 'all';
+  const paramLocation = searchParams.get('locationId') || 'all';
+  const paramStartDate = searchParams.get('datePreset') === 'today' ? '' : searchParams.get('startDate')?.slice(0, 10) || '';
+  const paramEndDate = searchParams.get('datePreset') === 'today' ? '' : searchParams.get('endDate')?.slice(0, 10) || '';
+  const paramSearch = searchParams.get('search') || '';
+
+  const [datePreset, setDatePreset] = useState<DatePreset>(paramDatePreset);
+  const [customStartDate, setCustomStartDate] = useState(paramStartDate);
+  const [customEndDate, setCustomEndDate] = useState(paramEndDate);
+  const [statusFilter, setStatusFilter] = useState(paramStatus);
+  const [paymentFilter, setPaymentFilter] = useState(paramPayment);
+  const [locationFilter, setLocationFilter] = useState(paramLocation);
+  const [search, setSearch] = useState(paramSearch);
   const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+
+  const tableRef = React.useRef<HTMLDivElement>(null);
+
+  // Re-synchronize state whenever searchParams changes (e.g. on client-side router navigation from Dashboard)
+  useEffect(() => {
+    setStatusFilter(paramStatus);
+    setDatePreset(paramDatePreset);
+    setPaymentFilter(paramPayment);
+    setLocationFilter(paramLocation);
+    setCustomStartDate(paramStartDate);
+    setCustomEndDate(paramEndDate);
+    if (paramSearch) setSearch(paramSearch);
+
+    // If redirected with drill-down filter parameters, scroll down to the actual data table
+    const hasDrilldown = Boolean(
+      searchParams.get('status') ||
+      searchParams.get('paymentStatus') ||
+      searchParams.get('locationId') ||
+      searchParams.get('datePreset') ||
+      searchParams.get('startDate') ||
+      searchParams.get('endDate') ||
+      searchParams.get('search')
+    );
+
+    if (hasDrilldown) {
+      const timer = setTimeout(() => {
+        tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams]);
 
   // Quick Global Search (Searches across all dates: Mobile, Name, Date, Order #)
   const [quickSearch, setQuickSearch] = useState('');
 
-  // Advanced Filters
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [paymentFilter, setPaymentFilter] = useState('all');
-  const [customStartDate, setCustomStartDate] = useState('');
-  const [customEndDate, setCustomEndDate] = useState('');
-
-  // Pagination & Sorting
+  // Advanced Filters text
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState<'createdAt' | 'total'>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -238,13 +278,10 @@ export default function OrdersPage() {
 
       if (!isGlobalQuickSearch) {
         if (customStartDate || customEndDate) {
-          if (customStartDate) params.set('startDate', new Date(customStartDate).toISOString());
-          if (customEndDate) {
-            const end = new Date(customEndDate);
-            end.setHours(23, 59, 59, 999);
-            params.set('endDate', end.toISOString());
-          }
+          if (customStartDate) params.set('startDate', customStartDate);
+          if (customEndDate) params.set('endDate', customEndDate);
         } else if (datePreset !== 'all') {
+          params.set('datePreset', datePreset);
           const range = getDateRangeForPreset(datePreset);
           if (range.start) params.set('startDate', range.start.toISOString());
           if (range.end) params.set('endDate', range.end.toISOString());
@@ -253,6 +290,7 @@ export default function OrdersPage() {
 
       if (statusFilter !== 'all') params.set('status', statusFilter);
       if (paymentFilter !== 'all') params.set('paymentStatus', paymentFilter);
+      if (locationFilter !== 'all') params.set('locationId', locationFilter);
 
       const activeSearch = quickSearch.trim() || search.trim();
       if (activeSearch) params.set('search', activeSearch);
@@ -274,7 +312,7 @@ export default function OrdersPage() {
   useEffect(() => {
     setCurrentPage(1);
     fetchOrders();
-  }, [datePreset, statusFilter, paymentFilter, customStartDate, customEndDate, quickSearch]);
+  }, [datePreset, statusFilter, paymentFilter, locationFilter, customStartDate, customEndDate, quickSearch]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -300,9 +338,51 @@ export default function OrdersPage() {
     setDatePreset('all');
   };
 
-  // Filter and sort orders client-side
+  // Filter and sort orders client-side with bulletproof status, payment and date safeguards
   const filteredAndSortedOrders = useMemo(() => {
     let list = [...orders];
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      if (statusFilter === 'active') {
+        list = list.filter((o) => o.status !== 'claimed' && o.status !== 'cancelled');
+      } else if (statusFilter === 'processing') {
+        list = list.filter((o) =>
+          ['processing', 'pending', 'washing_drying', 'washing', 'drying', 'ironing', 'dry_cleaning', 'folding'].includes(o.status)
+        );
+      } else if (statusFilter === 'ready' || statusFilter === 'done') {
+        list = list.filter((o) => o.status === 'ready' || o.status === 'done');
+      } else if (statusFilter === 'claimed') {
+        list = list.filter((o) => o.status === 'claimed');
+      }
+    }
+
+    // Payment filter
+    if (paymentFilter !== 'all') {
+      if (paymentFilter === 'unpaid') {
+        list = list.filter((o) => (o.balance !== undefined ? o.balance > 0 : o.total - o.amountPaid > 0));
+      } else if (paymentFilter === 'paid') {
+        list = list.filter((o) => (o.balance !== undefined ? o.balance <= 0 : o.amountPaid >= o.total));
+      } else if (paymentFilter === 'partial') {
+        list = list.filter((o) => o.amountPaid > 0 && (o.balance !== undefined ? o.balance > 0 : o.amountPaid < o.total));
+      }
+    }
+
+    // Date filter safeguard if preset is today
+    if (datePreset === 'today' && !quickSearch.trim()) {
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const todayStr = `${yyyy}-${mm}-${dd}`;
+      list = list.filter((o) => {
+        const d = new Date(o.createdAt);
+        const oy = d.getFullYear();
+        const om = String(d.getMonth() + 1).padStart(2, '0');
+        const od = String(d.getDate()).padStart(2, '0');
+        return `${oy}-${om}-${od}` === todayStr;
+      });
+    }
 
     const effectiveSearch = (quickSearch.trim() || search.trim()).toLowerCase();
     if (effectiveSearch) {
@@ -350,7 +430,7 @@ export default function OrdersPage() {
     });
 
     return list;
-  }, [orders, search, sortField, sortOrder]);
+  }, [orders, search, quickSearch, statusFilter, paymentFilter, locationFilter, datePreset, customStartDate, customEndDate, sortField, sortOrder]);
 
   // Financial Summaries for active view
   const summary = useMemo(() => {
@@ -399,10 +479,18 @@ export default function OrdersPage() {
     if (s === 'claimed' || s === 'delivered') {
       return 'bg-emerald-100 text-emerald-800 border-emerald-200';
     }
-    if (s === 'ready') {
+    if (s === 'ready' || s === 'done') {
       return 'bg-blue-100 text-blue-800 border-blue-200';
     }
-    if (s.includes('washing') || s.includes('drying') || s.includes('iron') || s.includes('process')) {
+    if (
+      s === 'processing' ||
+      s === 'pending' ||
+      s.includes('washing') ||
+      s.includes('drying') ||
+      s.includes('iron') ||
+      s.includes('dry') ||
+      s.includes('process')
+    ) {
       return 'bg-amber-100 text-amber-800 border-amber-200';
     }
     return 'bg-slate-100 text-slate-700 border-slate-200';
@@ -635,13 +723,10 @@ export default function OrdersPage() {
                     className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="all">All Statuses</option>
-                    <option value="pending">Pending</option>
+                    <option value="active">Active in Store (Processing + Ready)</option>
                     <option value="processing">Processing</option>
-                    <option value="washing_drying">Washing / Drying</option>
-                    <option value="ironing">Ironing</option>
-                    <option value="dryCleaning">Dry Clean</option>
                     <option value="ready">Ready for Pickup</option>
-                    <option value="claimed">Delivered / Claimed</option>
+                    <option value="claimed">Delivered</option>
                   </select>
                 </div>
 
@@ -696,6 +781,37 @@ export default function OrdersPage() {
             </div>
           )}
 
+          {/* Active Filter Indicator Banner */}
+          {(statusFilter !== 'all' || paymentFilter !== 'all' || (datePreset !== 'all' && datePreset !== 'today') || customStartDate) && (
+            <div className="px-4 py-2.5 rounded-2xl bg-blue-50 border border-blue-200 flex flex-wrap items-center justify-between gap-2 text-xs text-blue-900 animate-in fade-in">
+              <div className="flex items-center space-x-2">
+                <Filter className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span>
+                  Filtered view: <strong className="font-bold text-blue-950">
+                    {statusFilter === 'active' && 'Active in Store (Processing + Ready)'}
+                    {statusFilter === 'processing' && 'Processing Orders'}
+                    {statusFilter === 'ready' && 'Ready for Pickup'}
+                    {statusFilter === 'claimed' && 'Delivered Orders'}
+                    {paymentFilter === 'unpaid' && ' • Unpaid / Pending Balances'}
+                    {paymentFilter === 'paid' && ' • Fully Paid'}
+                    {paymentFilter === 'partial' && ' • Partially Paid'}
+                    {datePreset === 'today' && ' • Today'}
+                    {customStartDate && ` • ${customStartDate} to ${customEndDate || customStartDate}`}
+                  </strong>
+                  {' '}({filteredAndSortedOrders.length} orders found)
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleClearFilters}
+                className="text-xs font-bold text-blue-700 hover:text-blue-900 underline flex items-center space-x-1"
+              >
+                <span>Reset to All Orders</span>
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           {/* Quick Metrics Bar */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-xs">
@@ -717,7 +833,11 @@ export default function OrdersPage() {
           </div>
 
           {/* Main Orders Table (Matching 'Recent Transactions in this Branch' style + Date Time Column) */}
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
+          <div
+            ref={tableRef}
+            id="orders-table"
+            className="scroll-mt-20 bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden"
+          >
             <div className="p-4 sm:p-5 border-b border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
                 <h3 className="font-bold text-slate-900 text-sm sm:text-base flex items-center space-x-2">
@@ -844,6 +964,10 @@ export default function OrdersPage() {
                             >
                               {ro.status === 'ready' || ro.status === 'done'
                                 ? 'Ready for Pickup'
+                                : ro.status === 'claimed' || ro.status === 'delivered'
+                                ? 'Delivered'
+                                : ro.status === 'processing' || ro.status === 'pending' || ['washing_drying', 'washing', 'drying', 'ironing', 'dry_cleaning', 'folding'].includes(ro.status)
+                                ? 'Processing'
                                 : ro.status.replace(/_/g, ' ')}
                             </span>
                           </td>
@@ -1090,5 +1214,13 @@ export default function OrdersPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function OrdersPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-100 flex items-center justify-center p-8 text-slate-400 font-semibold text-xs">Loading orders directory...</div>}>
+      <OrdersContent />
+    </Suspense>
   );
 }

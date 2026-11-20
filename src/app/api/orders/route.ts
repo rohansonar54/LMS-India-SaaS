@@ -8,6 +8,7 @@ import { Payment } from '@/models/Payment';
 import { Log } from '@/models/Log';
 import { getLocationQueryFilter, getCurrentUser, requireAuth } from '@/lib/auth-helpers';
 import { getWorkflowStagesForServices, normalizeWorkflowStages } from '@/lib/workflow';
+import { parseDateBoundaries } from '@/lib/date-utils';
 import crypto from 'crypto';
 
 export async function GET(req: Request) {
@@ -21,15 +22,35 @@ export async function GET(req: Request) {
     const paymentStatus = searchParams.get('paymentStatus');
     const search = searchParams.get('search')?.trim();
     const sort = searchParams.get('sort') || 'newest';
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
+    const datePreset = searchParams.get('datePreset');
+    let startDate = searchParams.get('startDate');
+    let endDate = searchParams.get('endDate');
+
+    if (datePreset === 'today' && !startDate) {
+      const now = new Date();
+      startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      endDate = startDate;
+    }
+    const locationIdParam = searchParams.get('locationId');
     const view = searchParams.get('view'); // 'table' or 'queue'
 
     const locationFilter = await getLocationQueryFilter(req);
     const filter: Record<string, unknown> = { ...locationFilter };
 
+    if (locationIdParam && locationIdParam !== 'all') {
+      filter.locationId = locationIdParam;
+    }
+
     if (status && status !== 'all') {
-      filter.status = status;
+      if (status === 'processing') {
+        filter.status = { $in: ['processing', 'pending', 'washing_drying', 'washing', 'drying', 'ironing', 'dry_cleaning', 'folding'] };
+      } else if (status === 'ready' || status === 'done') {
+        filter.status = { $in: ['ready', 'done'] };
+      } else if (status === 'active') {
+        filter.status = { $nin: ['claimed', 'cancelled'] };
+      } else {
+        filter.status = status;
+      }
     }
 
     if (paymentStatus && paymentStatus !== 'all') {
@@ -59,19 +80,12 @@ export async function GET(req: Request) {
       filter.$or = orConditions;
     }
 
-    if (startDate || endDate) {
+    const { start: parsedStart, end: parsedEnd } = parseDateBoundaries(startDate, endDate);
+    if (parsedStart || parsedEnd) {
       const dateFilter: Record<string, Date> = {};
-      if (startDate) {
-        const start = new Date(startDate);
-        if (!isNaN(start.getTime())) dateFilter.$gte = start;
-      }
-      if (endDate) {
-        const end = new Date(endDate);
-        if (!isNaN(end.getTime())) dateFilter.$lte = end;
-      }
-      if (Object.keys(dateFilter).length > 0) {
-        filter.createdAt = dateFilter;
-      }
+      if (parsedStart) dateFilter.$gte = parsedStart;
+      if (parsedEnd) dateFilter.$lte = parsedEnd;
+      filter.createdAt = dateFilter;
     }
 
     let sortOptions: Record<string, 1 | -1> = { createdAt: -1 };
@@ -89,6 +103,12 @@ export async function GET(req: Request) {
     } else if (view === 'table' || startDate || endDate) {
       // Full orders table list
       orders = await Order.find(filter).sort(sortOptions).lean();
+    } else if (view === 'queue') {
+      // For simplified 2-column queue board: only active orders in Processing or Ready for Pickup
+      orders = await Order.find({
+        ...filter,
+        status: { $nin: ['claimed', 'cancelled'] },
+      }).sort(sortOptions).lean();
     } else if (status === 'claimed') {
       // Delivered section: limit to newest 150 orders
       orders = await Order.find(filter).sort({ createdAt: -1 }).limit(150).lean();
@@ -258,16 +278,16 @@ export async function POST(req: Request) {
       change,
       paymentStatus,
       paymentMethod,
-      status: 'pending',
+      status: 'processing',
       activeWorkflowSteps,
       expectedDeliveryDate: expectedDeliveryDate ? new Date(expectedDeliveryDate) : new Date(Date.now() + 86400000 * 2),
-      timeline: { pendingAt: now },
+      timeline: { processingAt: now, pendingAt: now },
       statusHistory: [
         {
-          status: 'pending',
+          status: 'processing',
           timestamp: now,
           staffName: staffName || user?.name || 'Staff',
-          notes: 'Order created',
+          notes: 'Order created and moved to processing',
         },
       ],
       notes: notes || '',

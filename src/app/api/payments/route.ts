@@ -5,6 +5,7 @@ import { Order } from '@/models/Order';
 import { Customer } from '@/models/Customer';
 import { Log } from '@/models/Log';
 import { getLocationQueryFilter, requireAuth } from '@/lib/auth-helpers';
+import { parseDateBoundaries } from '@/lib/date-utils';
 
 export async function GET(req: Request) {
   try {
@@ -16,6 +17,15 @@ export async function GET(req: Request) {
     const orderId = searchParams.get('orderId');
     const customerId = searchParams.get('customerId');
     const method = searchParams.get('method');
+    const datePreset = searchParams.get('datePreset');
+    let startDate = searchParams.get('startDate');
+    let endDate = searchParams.get('endDate');
+
+    if (datePreset === 'today' && !startDate) {
+      const now = new Date();
+      startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      endDate = startDate;
+    }
 
     const locationFilter = await getLocationQueryFilter(req);
     const filter: Record<string, unknown> = { ...locationFilter };
@@ -24,9 +34,18 @@ export async function GET(req: Request) {
     if (customerId) filter.customerId = customerId;
     if (method && method !== 'all') filter.method = method;
 
+    const { start: parsedStart, end: parsedEnd } = parseDateBoundaries(startDate, endDate);
+    if (parsedStart || parsedEnd) {
+      const dateQuery: Record<string, unknown> = {};
+      if (parsedStart) dateQuery.$gte = parsedStart;
+      if (parsedEnd) dateQuery.$lte = parsedEnd;
+      filter.createdAt = dateQuery;
+    }
+
+    const orderDateFilter = (parsedStart || parsedEnd) ? { createdAt: filter.createdAt } : {};
     const [payments, ordersWithBalance] = await Promise.all([
       Payment.find(filter).sort({ createdAt: -1 }),
-      Order.find({ ...locationFilter, balance: { $gt: 0 }, status: { $ne: 'cancelled' } })
+      Order.find({ ...locationFilter, ...orderDateFilter, balance: { $gt: 0 }, status: { $ne: 'cancelled' } })
         .select('orderNumber customerId customerName customerContact total amountPaid balance status createdAt')
         .sort({ balance: -1 }),
     ]);

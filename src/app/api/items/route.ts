@@ -17,7 +17,19 @@ export async function GET(req: Request) {
       filter.category = category;
     }
 
-    const items = await ClothingItem.find(filter).sort({ name: 1 });
+    // Ensure all existing items have a deterministic initial sequence
+    const unsequenced = await ClothingItem.countDocuments({ $or: [{ order: { $exists: false } }, { order: 0 }] });
+    if (unsequenced > 0) {
+      const allItems = await ClothingItem.find({ active: true }).sort({ createdAt: 1, name: 1 });
+      for (let i = 0; i < allItems.length; i++) {
+        if (!allItems[i].order) {
+          allItems[i].order = i + 1;
+          await allItems[i].save();
+        }
+      }
+    }
+
+    const items = await ClothingItem.find(filter).sort({ order: 1, createdAt: 1, name: 1 });
     return NextResponse.json({ success: true, items });
   } catch (error: unknown) {
     const err = error as Error;
@@ -50,6 +62,7 @@ export async function POST(req: Request) {
       ];
     }
 
+    const totalCount = await ClothingItem.countDocuments();
     const newItem = await ClothingItem.create({
       name: name.trim(),
       category: category || 'General',
@@ -57,6 +70,7 @@ export async function POST(req: Request) {
       defaultService: defaultService || 'Wash & Iron',
       services: serviceRates,
       active: true,
+      order: totalCount + 1,
       locationId: user.level > 0 && user.locationId ? user.locationId : null,
     });
 
@@ -74,7 +88,19 @@ export async function PUT(req: Request) {
 
     await connectDB();
 
-    const { id, name, category, services, defaultService, active } = await req.json();
+    const body = await req.json();
+
+    // Check if it's a batch reorder request
+    if (body.reorder && Array.isArray(body.reorder)) {
+      await Promise.all(
+        body.reorder.map((item: { id: string; order: number }) =>
+          ClothingItem.findByIdAndUpdate(item.id, { order: Number(item.order) || 0 })
+        )
+      );
+      return NextResponse.json({ success: true, message: 'Sequence updated successfully' });
+    }
+
+    const { id, name, category, services, defaultService, active, order } = body;
     if (!id) {
       return NextResponse.json({ success: false, message: 'Item ID is required' }, { status: 400 });
     }
@@ -87,6 +113,7 @@ export async function PUT(req: Request) {
         ...(services && { services }),
         ...(defaultService && { defaultService }),
         ...(active !== undefined && { active }),
+        ...(order !== undefined && { order: Number(order) }),
       },
       { new: true }
     );

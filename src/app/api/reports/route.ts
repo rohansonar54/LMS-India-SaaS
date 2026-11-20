@@ -37,7 +37,11 @@ export async function GET(req: Request) {
     // Status filter
     const statusQuery: Record<string, unknown> = {};
     if (statusParam && statusParam !== 'all') {
-      if (statusParam === 'washing_drying' || statusParam === 'washing') {
+      if (statusParam === 'processing') {
+        statusQuery.status = { $in: ['processing', 'pending', 'washing_drying', 'washing', 'drying', 'ironing', 'dry_cleaning', 'folding'] };
+      } else if (statusParam === 'ready' || statusParam === 'done') {
+        statusQuery.status = { $in: ['ready', 'done'] };
+      } else if (statusParam === 'washing_drying' || statusParam === 'washing') {
         statusQuery.status = { $in: ['washing_drying', 'washing', 'drying'] };
       } else {
         statusQuery.status = statusParam;

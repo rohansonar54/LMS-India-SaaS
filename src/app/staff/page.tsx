@@ -240,9 +240,8 @@ export default function StaffPage() {
                             </span>
                           </td>
                           <td className="py-3 px-4">
-                            <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] uppercase ${
-                              s.level === 0 ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-700'
-                            }`}>
+                            <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] uppercase ${s.level === 0 ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-700'
+                              }`}>
                               {s.level === 0 ? 'Admin' : 'Front Desk Staff'}
                             </span>
                           </td>
@@ -399,8 +398,8 @@ export default function StaffPage() {
                   {formSubmitting
                     ? 'Saving...'
                     : editingStaff
-                    ? 'Save Changes'
-                    : 'Create Staff'}
+                      ? 'Save Changes'
+                      : 'Create Staff'}
                 </button>
               </div>
             </form>

@@ -4,6 +4,7 @@ import { Customer } from '@/models/Customer';
 import { Location } from '@/models/Location';
 import { Log } from '@/models/Log';
 import { getLocationQueryFilter, requireAuth } from '@/lib/auth-helpers';
+import { parseDateBoundaries } from '@/lib/date-utils';
 
 export async function GET(req: Request) {
   try {
@@ -13,9 +14,26 @@ export async function GET(req: Request) {
     await connectDB();
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('search')?.trim();
+    const datePreset = searchParams.get('datePreset');
+    let startDate = searchParams.get('startDate');
+    let endDate = searchParams.get('endDate');
+
+    if (datePreset === 'today' && !startDate) {
+      const now = new Date();
+      startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      endDate = startDate;
+    }
 
     const locationFilter = await getLocationQueryFilter(req);
     const filter: Record<string, unknown> = { ...locationFilter };
+
+    const { start: parsedStart, end: parsedEnd } = parseDateBoundaries(startDate, endDate);
+    if (parsedStart || parsedEnd) {
+      const dateQuery: Record<string, unknown> = {};
+      if (parsedStart) dateQuery.$gte = parsedStart;
+      if (parsedEnd) dateQuery.$lte = parsedEnd;
+      filter.createdAt = dateQuery;
+    }
 
     if (search) {
       filter.$or = [

@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import Pagination from '@/components/Pagination';
 import { formatINR } from '@/lib/currency';
-import { Users, Plus, Search, Edit2, Trash2, Phone, MapPin, Building2, Wallet, AlertCircle } from 'lucide-react';
+import { Users, Plus, Search, Edit2, Trash2, Phone, MapPin, Building2, Wallet, AlertCircle, Calendar, X } from 'lucide-react';
 
 interface Customer {
   _id: string;
@@ -17,13 +18,55 @@ interface Customer {
   createdAt: string;
 }
 
-export default function CustomersPage() {
+function CustomersContent() {
+  const searchParams = useSearchParams();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [search, setSearch] = useState('');
+
+  const paramSearch = searchParams.get('search') || '';
+  const paramDatePreset = searchParams.get('datePreset');
+  const paramStartDate = searchParams.get('startDate')?.slice(0, 10) || '';
+  const paramEndDate = searchParams.get('endDate')?.slice(0, 10) || '';
+
+  const getTodayStr = () => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const initialStartDate = paramDatePreset === 'today' ? getTodayStr() : paramStartDate;
+  const initialEndDate = paramDatePreset === 'today' ? getTodayStr() : paramEndDate;
+
+  const [search, setSearch] = useState(paramSearch);
+  const [startDate, setStartDate] = useState(initialStartDate);
+  const [endDate, setEndDate] = useState(initialEndDate);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 20;
+
+  // Sync whenever searchParams changes
+  useEffect(() => {
+    if (paramSearch) setSearch(paramSearch);
+    if (paramDatePreset === 'today') {
+      const todayStr = getTodayStr();
+      setStartDate(todayStr);
+      setEndDate(todayStr);
+    } else {
+      setStartDate(paramStartDate);
+      setEndDate(paramEndDate);
+    }
+
+    if (paramDatePreset || paramStartDate || paramEndDate || paramSearch) {
+      const timer = setTimeout(() => {
+        customerTableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams]);
+
+  const customerTableRef = React.useRef<HTMLDivElement>(null);
 
   // Modal State
   const [showModal, setShowModal] = useState(false);
@@ -32,17 +75,25 @@ export default function CustomersPage() {
   const [contact, setContact] = useState('');
   const [address, setAddress] = useState('');
 
-  const fetchCustomers = () => {
+  const fetchCustomers = useCallback(() => {
     setLoading(true);
-    fetch('/api/customers')
+    let url = '/api/customers';
+    const params = new URLSearchParams();
+    if (startDate) params.set('startDate', startDate);
+    if (endDate) params.set('endDate', endDate);
+    if (search) params.set('search', search);
+    const qs = params.toString();
+    if (qs) url += `?${qs}`;
+
+    fetch(url)
       .then((res) => res.json())
       .then((data) => setCustomers(data.customers || []))
       .finally(() => setLoading(false));
-  };
+  }, [startDate, endDate, search]);
 
   useEffect(() => {
     fetchCustomers();
-  }, []);
+  }, [fetchCustomers]);
 
   const normalizeDigits = (str: string) => {
     const d = (str || '').replace(/\D/g, '');
@@ -122,12 +173,24 @@ export default function CustomersPage() {
     }
   };
 
-  const filtered = customers.filter(
-    (c) =>
-      c.fullname.toLowerCase().includes(search.toLowerCase()) ||
-      c.contact.includes(search) ||
-      c.address.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = customers.filter((c) => {
+    if (startDate && endDate && startDate === endDate) {
+      const d = new Date(c.createdAt);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      if (`${yyyy}-${mm}-${dd}` !== startDate) return false;
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      return (
+        c.fullname.toLowerCase().includes(q) ||
+        c.contact.includes(q) ||
+        c.address.toLowerCase().includes(q)
+      );
+    }
+    return true;
+  });
 
   return (
     <div className="flex min-h-screen bg-slate-100">
@@ -166,8 +229,31 @@ export default function CustomersPage() {
             </button>
           </div>
 
+          {/* Active Date Filter Banner if filtered by Dashboard */}
+          {(startDate || endDate) && (
+            <div className="px-4 py-2.5 rounded-2xl bg-cyan-50 border border-cyan-200 flex items-center justify-between text-xs text-cyan-900 animate-in fade-in">
+              <div className="flex items-center space-x-2">
+                <Calendar className="w-3.5 h-3.5 text-cyan-600" />
+                <span>
+                  Showing customers registered for: <strong>{startDate === endDate ? startDate : `${startDate} to ${endDate}`}</strong> ({filtered.length} found)
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setStartDate('');
+                  setEndDate('');
+                }}
+                className="text-cyan-700 hover:text-cyan-950 font-bold underline flex items-center space-x-1"
+              >
+                <span>Show All Customers</span>
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           {/* Customers Table */}
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
+          <div ref={customerTableRef} className="scroll-mt-20 bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
@@ -352,5 +438,13 @@ export default function CustomersPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function CustomersPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-100 flex items-center justify-center p-8 text-slate-400 font-semibold text-xs">Loading customer directory...</div>}>
+      <CustomersContent />
+    </Suspense>
   );
 }

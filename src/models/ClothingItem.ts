@@ -12,6 +12,7 @@ export interface IClothingItem extends Document {
   defaultService: string;
   services: IItemServiceRate[];
   active: boolean;
+  order?: number;
   locationId?: mongoose.Types.ObjectId; // null = global, or specific to location
   createdAt: Date;
 }
@@ -28,9 +29,14 @@ const ClothingItemSchema = new Schema<IClothingItem>({
   defaultService: { type: String, default: 'Wash & Iron' },
   services: [ItemServiceRateSchema],
   active: { type: Boolean, default: true },
+  order: { type: Number, default: 0 },
   locationId: { type: Schema.Types.ObjectId, ref: 'Location', default: null },
   createdAt: { type: Date, default: Date.now },
 });
+
+if (process.env.NODE_ENV !== 'production' && mongoose.models.ClothingItem) {
+  delete mongoose.models.ClothingItem;
+}
 
 export const ClothingItem: Model<IClothingItem> =
   mongoose.models.ClothingItem || mongoose.model<IClothingItem>('ClothingItem', ClothingItemSchema);

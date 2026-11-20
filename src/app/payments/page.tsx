@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import ReceiptModal, { ReceiptOrder } from '@/components/ReceiptModal';
@@ -57,7 +58,8 @@ interface OrderWithBalance {
   createdAt: string;
 }
 
-export default function PaymentsPage() {
+function PaymentsContent() {
+  const searchParams = useSearchParams();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [customerBalances, setCustomerBalances] = useState<CustomerBalanceItem[]>([]);
@@ -70,12 +72,55 @@ export default function PaymentsPage() {
   });
 
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'balances' | 'history'>('balances');
+
+  // Read URL query parameters
+  const paramTab = searchParams.get('tab') as 'balances' | 'history' | null;
+  const paramMethod = searchParams.get('method') || 'all';
+  const paramDatePreset = searchParams.get('datePreset');
+  const paramStartDate = searchParams.get('startDate')?.slice(0, 10) || '';
+  const paramEndDate = searchParams.get('endDate')?.slice(0, 10) || '';
+
+  const getTodayStr = () => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const initialDate = paramDatePreset === 'today' ? getTodayStr() : paramStartDate;
+
+  const [activeTab, setActiveTab] = useState<'balances' | 'history'>(paramTab || 'balances');
   const [search, setSearch] = useState('');
-  const [methodFilter, setMethodFilter] = useState('all');
+  const [methodFilter, setMethodFilter] = useState(paramMethod);
+  const [startDate, setStartDate] = useState(initialDate);
+  const [endDate, setEndDate] = useState(paramDatePreset === 'today' ? getTodayStr() : paramEndDate);
   const [balancesPage, setBalancesPage] = useState(1);
   const [historyPage, setHistoryPage] = useState(1);
   const PAGE_SIZE = 20;
+
+  // Re-synchronize whenever searchParams changes
+  useEffect(() => {
+    if (paramTab) setActiveTab(paramTab);
+    if (paramMethod) setMethodFilter(paramMethod);
+    if (paramDatePreset === 'today') {
+      const todayStr = getTodayStr();
+      setStartDate(todayStr);
+      setEndDate(todayStr);
+    } else {
+      if (paramStartDate) setStartDate(paramStartDate);
+      if (paramEndDate) setEndDate(paramEndDate);
+    }
+
+    if (paramTab || paramDatePreset || paramStartDate || paramEndDate || paramMethod) {
+      const timer = setTimeout(() => {
+        paymentsTableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams]);
+
+  const paymentsTableRef = React.useRef<HTMLDivElement>(null);
 
   // Quick Collect Payment Modal
   const [selectedOrderToPay, setSelectedOrderToPay] = useState<OrderWithBalance | null>(null);
@@ -90,7 +135,11 @@ export default function PaymentsPage() {
 
   const fetchPaymentsData = () => {
     setLoading(true);
-    fetch(`/api/payments?method=${methodFilter}`)
+    let url = `/api/payments?method=${methodFilter}`;
+    if (startDate) url += `&startDate=${startDate}`;
+    if (endDate) url += `&endDate=${endDate}`;
+
+    fetch(url)
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
@@ -105,7 +154,7 @@ export default function PaymentsPage() {
 
   useEffect(() => {
     fetchPaymentsData();
-  }, [methodFilter]);
+  }, [methodFilter, startDate, endDate]);
 
   const handleOpenCollectModal = (order: OrderWithBalance) => {
     setSelectedOrderToPay(order);
@@ -156,12 +205,27 @@ export default function PaymentsPage() {
       c.contact.includes(search)
   );
 
-  const filteredPayments = payments.filter(
-    (p) =>
-      p.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
-      p.customerName.toLowerCase().includes(search.toLowerCase()) ||
-      (p.referenceNumber && p.referenceNumber.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filteredPayments = payments.filter((p) => {
+    if (startDate && endDate && startDate === endDate) {
+      const d = new Date(p.createdAt);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      if (`${yyyy}-${mm}-${dd}` !== startDate) return false;
+    }
+    if (methodFilter !== 'all' && p.method !== methodFilter) {
+      return false;
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      return (
+        p.orderNumber.toLowerCase().includes(q) ||
+        p.customerName.toLowerCase().includes(q) ||
+        (p.referenceNumber && p.referenceNumber.toLowerCase().includes(q))
+      );
+    }
+    return true;
+  });
 
   return (
     <div className="flex min-h-screen bg-slate-100">
@@ -239,7 +303,7 @@ export default function PaymentsPage() {
           </div>
 
           {/* Tab Switcher & Search Bar */}
-          <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-xs space-y-3">
+          <div ref={paymentsTableRef} className="scroll-mt-20 bg-white p-4 rounded-3xl border border-slate-200 shadow-xs space-y-3">
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
               {/* Tabs */}
               <div className="flex items-center space-x-1.5 p-1 rounded-2xl bg-slate-100">
@@ -283,19 +347,53 @@ export default function PaymentsPage() {
                 </div>
 
                 {activeTab === 'history' && (
-                  <select
-                    value={methodFilter}
-                    onChange={(e) => {
-                      setMethodFilter(e.target.value);
-                      setHistoryPage(1);
-                    }}
-                    className="px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 bg-white"
-                  >
-                    <option value="all">All Modes</option>
-                    <option value="Cash">Cash</option>
-                    <option value="UPI">UPI</option>
-                    <option value="Card">Card</option>
-                  </select>
+                  <>
+                    <select
+                      value={methodFilter}
+                      onChange={(e) => {
+                        setMethodFilter(e.target.value);
+                        setHistoryPage(1);
+                      }}
+                      className="px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 bg-white"
+                    >
+                      <option value="all">All Modes</option>
+                      <option value="Cash">Cash</option>
+                      <option value="UPI">UPI</option>
+                      <option value="Card">Card</option>
+                      <option value="Net Banking">Net Banking</option>
+                    </select>
+
+                    <div className="flex items-center space-x-1.5 bg-slate-50 border border-slate-300 rounded-xl px-2 py-1">
+                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                      <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="text-xs bg-transparent focus:outline-none text-slate-700"
+                        title="From Date"
+                      />
+                      <span className="text-slate-400 text-xs">to</span>
+                      <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="text-xs bg-transparent focus:outline-none text-slate-700"
+                        title="To Date"
+                      />
+                      {(startDate || endDate) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setStartDate('');
+                            setEndDate('');
+                          }}
+                          className="text-[10px] text-rose-500 font-bold hover:underline ml-1"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                  </>
                 )}
 
                 <button
@@ -532,7 +630,8 @@ export default function PaymentsPage() {
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400">₹</span>
                   <input
                     type="number"
-                    min="1"
+                    min="0.01"
+                    step="any"
                     max={selectedOrderToPay.balance}
                     required
                     value={payAmount}
@@ -612,6 +711,14 @@ export default function PaymentsPage() {
       {/* Dual Printable Receipt Modal */}
       <ReceiptModal order={receiptOrder} onClose={() => setReceiptOrder(null)} />
     </div>
+  );
+}
+
+export default function PaymentsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-100 flex items-center justify-center p-8 text-slate-400 font-semibold text-xs">Loading payments ledger...</div>}>
+      <PaymentsContent />
+    </Suspense>
   );
 }
 

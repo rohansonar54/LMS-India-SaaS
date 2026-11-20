@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import { formatINR } from '@/lib/currency';
-import { Plus, Edit2, Trash2, Shirt, Layers, Sparkles, CheckCircle2, XCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Shirt, Layers, Sparkles, CheckCircle2, XCircle, GripVertical, ArrowUp, ArrowDown } from 'lucide-react';
 
 interface ClothingItem {
   _id: string;
@@ -14,6 +14,7 @@ interface ClothingItem {
   defaultService: string;
   services: { serviceName: string; price: number }[];
   active: boolean;
+  order?: number;
 }
 
 interface ServiceItem {
@@ -64,6 +65,66 @@ export default function SettingsPage() {
   const [weightName, setWeightName] = useState('');
   const [weightUnit, setWeightUnit] = useState('kg');
   const [weightPrice, setWeightPrice] = useState('45');
+
+  // Sequence Reordering State
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [isSavingSequence, setIsSavingSequence] = useState(false);
+  const [sequenceSavedToast, setSequenceSavedToast] = useState(false);
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === dropIndex) return;
+
+    const updated = [...clothingItems];
+    const [removed] = updated.splice(draggedIndex, 1);
+    updated.splice(dropIndex, 0, removed);
+    setClothingItems(updated);
+    setDraggedIndex(null);
+    saveSequence(updated);
+  };
+
+  const handleMoveSequence = (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= clothingItems.length) return;
+
+    const updated = [...clothingItems];
+    const temp = updated[index];
+    updated[index] = updated[targetIndex];
+    updated[targetIndex] = temp;
+    setClothingItems(updated);
+    saveSequence(updated);
+  };
+
+  const saveSequence = async (items: ClothingItem[]) => {
+    setIsSavingSequence(true);
+    try {
+      const reorder = items.map((it, idx) => ({ id: it._id, order: idx + 1 }));
+      const res = await fetch('/api/items', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reorder }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSequenceSavedToast(true);
+        setTimeout(() => setSequenceSavedToast(false), 2500);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setIsSavingSequence(false);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -119,10 +180,14 @@ export default function SettingsPage() {
     e.preventDefault();
     if (!itemName.trim()) return;
 
-    const formattedServices = services.map((s) => ({
-      serviceName: s.name,
-      price: Math.max(0, Number(itemServicePrices[s.name]) || s.defaultPrice || 0),
-    }));
+    const formattedServices = services.map((s) => {
+      const val = itemServicePrices[s.name];
+      const parsed = val !== undefined && val !== '' ? parseFloat(val) : NaN;
+      return {
+        serviceName: s.name,
+        price: !isNaN(parsed) && parsed >= 0 ? parsed : s.defaultPrice || 0,
+      };
+    });
 
     const method = editingItemId ? 'PUT' : 'POST';
     const body = editingItemId
@@ -178,20 +243,23 @@ export default function SettingsPage() {
     e.preventDefault();
     if (!serviceName.trim()) return;
 
+    const parsedPrice = parseFloat(serviceDefaultPrice);
+    const validPrice = !isNaN(parsedPrice) && parsedPrice >= 0 ? parsedPrice : 0;
+
     const method = editingServiceId ? 'PUT' : 'POST';
     const body = editingServiceId
       ? {
           id: editingServiceId,
           name: serviceName.trim(),
           category: serviceCategory,
-          defaultPrice: Number(serviceDefaultPrice) || 0,
+          defaultPrice: validPrice,
           description: serviceDesc.trim(),
           active: serviceActive,
         }
       : {
           name: serviceName.trim(),
           category: serviceCategory,
-          defaultPrice: Number(serviceDefaultPrice) || 0,
+          defaultPrice: validPrice,
           description: serviceDesc.trim(),
           active: serviceActive,
         };
@@ -372,17 +440,32 @@ export default function SettingsPage() {
           {/* TAB 1: Garment Item Master */}
           {activeTab === 'garments' && (
             <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
-              <div className="p-5 border-b border-slate-200 flex items-center justify-between">
+              <div className="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="font-bold text-slate-800 text-sm">Individual Garment Pricing</h3>
-                  <p className="text-xs text-slate-500">Configured rates appear automatically in the POS Counter</p>
+                  <h3 className="font-bold text-slate-800 text-sm">Individual Garment Pricing &amp; Sequence</h3>
+                  <p className="text-xs text-slate-500">
+                    Drag rows or use ▲/▼ arrows to reorder garments. This sequence controls the exact order shown in POS Quick Add.
+                  </p>
                 </div>
+                {sequenceSavedToast && (
+                  <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200 animate-in fade-in">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Sequence saved &amp; synced to Quick Add!</span>
+                  </span>
+                )}
+                {isSavingSequence && (
+                  <span className="inline-flex items-center space-x-1.5 text-xs text-blue-600 font-semibold animate-pulse">
+                    <span>Saving sequence...</span>
+                  </span>
+                )}
               </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px]">
+                      <th className="py-3 px-3 w-16 text-center">Seq #</th>
+                      <th className="py-3 px-2 w-14 text-center">Reorder</th>
                       <th className="py-3 px-4">Garment Item</th>
                       <th className="py-3 px-4">Category</th>
                       {activeServices.map((svc) => (
@@ -396,19 +479,63 @@ export default function SettingsPage() {
                   <tbody className="divide-y divide-slate-100">
                     {loading ? (
                       <tr>
-                        <td colSpan={3 + activeServices.length} className="py-8 text-center text-slate-400">
+                        <td colSpan={5 + activeServices.length} className="py-8 text-center text-slate-400">
                           Loading garment rates...
                         </td>
                       </tr>
                     ) : clothingItems.length === 0 ? (
                       <tr>
-                        <td colSpan={3 + activeServices.length} className="py-8 text-center text-slate-400">
+                        <td colSpan={5 + activeServices.length} className="py-8 text-center text-slate-400">
                           No items found.
                         </td>
                       </tr>
                     ) : (
-                      clothingItems.map((item) => (
-                        <tr key={item._id} className="hover:bg-slate-50 transition">
+                      clothingItems.map((item, index) => (
+                        <tr
+                          key={item._id}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, index)}
+                          onDragOver={(e) => handleDragOver(e, index)}
+                          onDrop={(e) => handleDrop(e, index)}
+                          className={`transition ${
+                            draggedIndex === index
+                              ? 'opacity-30 bg-blue-100 border-2 border-dashed border-blue-500'
+                              : 'hover:bg-slate-50'
+                          }`}
+                        >
+                          <td className="py-3 px-3 text-center">
+                            <span className="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-slate-100 text-slate-700 font-black text-xs font-mono border border-slate-200 shadow-2xs">
+                              #{index + 1}
+                            </span>
+                          </td>
+                          <td className="py-3 px-2 text-center">
+                            <div className="flex items-center justify-center space-x-0.5">
+                              <button
+                                type="button"
+                                disabled={index === 0}
+                                onClick={() => handleMoveSequence(index, 'up')}
+                                title="Move up (swap with previous)"
+                                className="p-1 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-20 disabled:cursor-not-allowed"
+                              >
+                                <ArrowUp className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={index === clothingItems.length - 1}
+                                onClick={() => handleMoveSequence(index, 'down')}
+                                title="Move down (swap with next)"
+                                className="p-1 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-20 disabled:cursor-not-allowed"
+                              >
+                                <ArrowDown className="w-3.5 h-3.5" />
+                              </button>
+                              <span
+                                className="p-1 text-slate-300 hover:text-slate-600 cursor-grab active:cursor-grabbing hidden sm:inline-block"
+                                title="Drag to reorder"
+                              >
+                                <GripVertical className="w-3.5 h-3.5" />
+                              </span>
+                            </div>
+                          </td>
                           <td className="py-3 px-4 font-bold text-slate-900 flex items-center space-x-2">
                             <span>{item.icon || '👕'}</span>
                             <span>{item.name}</span>
@@ -661,6 +788,7 @@ export default function SettingsPage() {
                         <input
                           type="number"
                           min="0"
+                          step="any"
                           value={itemServicePrices[svc.name] || ''}
                           onChange={(e) =>
                             setItemServicePrices({
@@ -741,6 +869,7 @@ export default function SettingsPage() {
                   <input
                     type="number"
                     min="0"
+                    step="any"
                     required
                     value={serviceDefaultPrice}
                     onChange={(e) => setServiceDefaultPrice(e.target.value)}

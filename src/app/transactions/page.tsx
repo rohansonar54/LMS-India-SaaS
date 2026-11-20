@@ -743,7 +743,7 @@ export default function TransactionsPage() {
                 <div className="space-y-1.5">
                   <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 scrollbar-thin">
                     <span className="text-[11px] text-slate-400 shrink-0 font-medium">Quick add:</span>
-                    {clothingItems.slice(0, 6).map((ci) => (
+                    {clothingItems.slice(0, 10).map((ci) => (
                       <button
                         key={ci._id}
                         type="button"
@@ -910,6 +910,7 @@ export default function TransactionsPage() {
                             <input
                               type="number"
                               min="0"
+                              step="any"
                               value={row.unitPrice}
                               onChange={(e) => handleUnitPriceChange(row.id, e.target.value)}
                               className="w-full text-xs font-mono font-medium text-slate-800 bg-white border border-slate-300 rounded-xl px-1.5 py-1.5 text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -960,6 +961,7 @@ export default function TransactionsPage() {
                     <input
                       type="number"
                       min="0"
+                      step="any"
                       value={additionalCharges}
                       onChange={(e) => setAdditionalCharges(e.target.value)}
                       placeholder="0"
@@ -972,6 +974,7 @@ export default function TransactionsPage() {
                     <input
                       type="number"
                       min="0"
+                      step="any"
                       value={discount}
                       onChange={(e) => setDiscount(e.target.value)}
                       placeholder="0"
@@ -1039,6 +1042,7 @@ export default function TransactionsPage() {
                     <input
                       type="number"
                       min="0"
+                      step="any"
                       value={amountPaid}
                       onChange={(e) => setAmountPaid(e.target.value)}
                       className="w-full pl-7 pr-3 py-2.5 text-base font-black font-mono text-slate-900 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1331,6 +1335,7 @@ export default function TransactionsPage() {
                 <input
                   type="number"
                   min="0"
+                  step="any"
                   required
                   value={customItemPrice}
                   onChange={(e) => setCustomItemPrice(e.target.value)}

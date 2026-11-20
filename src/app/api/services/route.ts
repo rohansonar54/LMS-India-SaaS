@@ -62,7 +62,7 @@ export async function POST(req: Request) {
     const newService = await Service.create({
       name: trimmedName,
       code: trimmedName.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
-      defaultPrice: Math.max(0, Number(defaultPrice) || 25),
+      defaultPrice: Math.max(0, typeof defaultPrice === 'number' ? defaultPrice : (parseFloat(defaultPrice) || 0)),
       category: category || 'Laundry',
       description: description?.trim() || '',
       active: true,
@@ -99,7 +99,7 @@ export async function PUT(req: Request) {
 
     const updateData: Record<string, unknown> = {};
     if (name !== undefined) updateData.name = name.trim();
-    if (defaultPrice !== undefined) updateData.defaultPrice = Math.max(0, Number(defaultPrice) || 0);
+    if (defaultPrice !== undefined) updateData.defaultPrice = Math.max(0, typeof defaultPrice === 'number' ? defaultPrice : (parseFloat(defaultPrice) || 0));
     if (category !== undefined) updateData.category = category;
     if (description !== undefined) updateData.description = description.trim();
     if (active !== undefined) updateData.active = Boolean(active);

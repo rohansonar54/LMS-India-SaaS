@@ -2,10 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import Link from 'next/link';
-import { CheckCircle2, Clock, ArrowLeft, AlertCircle, Building2 } from 'lucide-react';
+import { CheckCircle2, Clock, AlertCircle, Building2 } from 'lucide-react';
 import { formatINR } from '@/lib/currency';
-import { ALL_STAGES, WorkflowStageKey, normalizeWorkflowStages } from '@/lib/workflow';
+import { ALL_STAGES, WorkflowStageKey, normalizeWorkflowStages, isProcessingStage } from '@/lib/workflow';
 
 interface OrderItem {
   itemName?: string;
@@ -55,25 +54,29 @@ export default function OrderTrackingClient({ orderNumber }: { orderNumber: stri
       .finally(() => setLoading(false));
   }, [orderNumber]);
 
-  const activeSteps = normalizeWorkflowStages(order?.activeWorkflowSteps);
-  const effectiveStatus = (order?.status === 'washing' || order?.status === 'drying') ? 'washing_drying' : order?.status;
-  const currentIdx = effectiveStatus ? activeSteps.indexOf(effectiveStatus) : 0;
+  const activeSteps: WorkflowStageKey[] = ['processing', 'done', 'claimed'];
+  let effectiveStatus: WorkflowStageKey = 'processing';
+  if (order?.status === 'done') {
+    effectiveStatus = 'done';
+  } else if (order?.status === 'claimed') {
+    effectiveStatus = 'claimed';
+  } else {
+    effectiveStatus = 'processing';
+  }
+  const currentIdx = activeSteps.indexOf(effectiveStatus);
   const displayItems = order?.orderItems && order.orderItems.length > 0 ? order.orderItems : (order?.items || []);
   const balance = order?.balance !== undefined ? order.balance : (order ? Math.max(0, order.total - order.amountPaid) : 0);
 
   return (
     <div className="min-h-screen bg-slate-900 py-10 px-4 flex flex-col items-center justify-center">
       <div className="max-w-xl w-full bg-white rounded-3xl shadow-2xl p-6 md:p-8 space-y-6">
-        {/* Back Link */}
+        {/* Top Header */}
         <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-          <Link
-            href="/tracking"
-            className="inline-flex items-center space-x-1.5 text-xs font-semibold text-slate-500 hover:text-blue-600 transition"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Search Another Order</span>
-          </Link>
-          <span className="text-xs font-mono font-bold text-blue-600">
+          <div className="flex items-center space-x-2">
+            <span className="text-base">🧺</span>
+            <span className="text-xs font-bold text-slate-800 tracking-wide uppercase">Live Order Tracking</span>
+          </div>
+          <span className="text-xs font-mono font-black text-blue-600 bg-blue-50 px-2.5 py-1 rounded-xl border border-blue-200">
             #{orderNumber?.toUpperCase()}
           </span>
         </div>
@@ -94,7 +97,7 @@ export default function OrderTrackingClient({ orderNumber }: { orderNumber: stri
                 {error || 'This tracking link is invalid or has expired. Please contact the laundry store for assistance.'}
               </p>
             </div>
-            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2">
+            <div className="pt-2 flex items-center justify-center">
               <button
                 onClick={() => {
                   setLoading(true);
@@ -111,16 +114,10 @@ export default function OrderTrackingClient({ orderNumber }: { orderNumber: stri
                     .catch(() => setError('Failed to load tracking data. Please check your internet connection.'))
                     .finally(() => setLoading(false));
                 }}
-                className="w-full sm:w-auto px-4 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-sm"
               >
                 Retry
               </button>
-              <Link
-                href="/tracking"
-                className="w-full sm:w-auto px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-sm"
-              >
-                Search Another Order
-              </Link>
             </div>
           </div>
         ) : (
@@ -143,32 +140,59 @@ export default function OrderTrackingClient({ orderNumber }: { orderNumber: stri
               </div>
             </div>
 
-            {/* Stepper Timeline (Dynamic service-based stages) */}
-            <div className="py-3 space-y-4">
-              <h4 className="font-bold text-slate-800 text-sm">Processing Pipeline</h4>
-              <div className="space-y-3.5">
-                {activeSteps.map((stepKey, idx) => {
-                  const stageInfo = ALL_STAGES[stepKey] || { label: stepKey, icon: '📋' };
-                  const isCompleted = currentIdx !== -1 && idx < currentIdx;
-                  const isCurrent = idx === currentIdx;
+            {/* Stepper Timeline - Centered in middle of page */}
+            <div className="py-4 border-t border-b border-slate-100 space-y-4">
+              <h4 className="font-black text-slate-800 text-xs text-center uppercase tracking-wider">
+                Order Processing Status
+              </h4>
 
-                  return (
-                    <div key={stepKey} className="flex items-center space-x-4">
-                      <div
-                        className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 transition-all ${
-                          isCompleted
-                            ? 'bg-emerald-500 text-white'
-                            : isCurrent
-                            ? 'bg-blue-600 text-white ring-4 ring-blue-100 scale-110 shadow-md'
-                            : 'bg-slate-100 text-slate-400 border border-slate-200'
-                        }`}
-                      >
-                        {isCompleted ? <CheckCircle2 className="w-5 h-5" /> : stageInfo.icon}
+              <div className="max-w-md mx-auto px-2">
+                {/* Horizontal Progress Bar & Step Badges */}
+                <div className="relative flex items-center justify-between mb-3 px-6 sm:px-10">
+                  {/* Connecting Line */}
+                  <div className="absolute left-10 right-10 top-1/2 -translate-y-1/2 h-1 bg-slate-200 z-0">
+                    <div
+                      className="h-full bg-blue-600 transition-all duration-500 rounded-full"
+                      style={{
+                        width: currentIdx <= 0 ? '0%' : currentIdx === 1 ? '50%' : '100%',
+                      }}
+                    />
+                  </div>
+
+                  {activeSteps.map((stepKey, idx) => {
+                    const stageInfo = ALL_STAGES[stepKey] || { label: stepKey, icon: '📋' };
+                    const isCompleted = currentIdx !== -1 && idx < currentIdx;
+                    const isCurrent = idx === currentIdx;
+
+                    return (
+                      <div key={stepKey} className="relative z-10 flex flex-col items-center">
+                        <div
+                          className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold transition-all shadow-sm ${
+                            isCompleted
+                              ? 'bg-emerald-600 text-white ring-4 ring-emerald-100'
+                              : isCurrent
+                              ? 'bg-blue-600 text-white ring-4 ring-blue-100 scale-110 shadow-lg'
+                              : 'bg-white text-slate-400 border-2 border-slate-300'
+                          }`}
+                        >
+                          {isCompleted ? <CheckCircle2 className="w-6 h-6 text-white" /> : stageInfo.icon}
+                        </div>
                       </div>
+                    );
+                  })}
+                </div>
 
-                      <div className="flex-1 min-w-0">
+                {/* Step Labels Centered Below */}
+                <div className="grid grid-cols-3 text-center gap-1">
+                  {activeSteps.map((stepKey, idx) => {
+                    const stageInfo = ALL_STAGES[stepKey] || { label: stepKey, icon: '📋' };
+                    const isCompleted = currentIdx !== -1 && idx < currentIdx;
+                    const isCurrent = idx === currentIdx;
+
+                    return (
+                      <div key={stepKey} className="px-1 flex flex-col items-center">
                         <p
-                          className={`text-xs sm:text-sm font-bold ${
+                          className={`text-xs font-black leading-tight ${
                             isCurrent
                               ? 'text-blue-600'
                               : isCompleted
@@ -178,17 +202,26 @@ export default function OrderTrackingClient({ orderNumber }: { orderNumber: stri
                         >
                           {stageInfo.label}
                         </p>
-                        <p className="text-[10px] text-slate-400">
+                        <span className="text-[10px] text-slate-400 mt-0.5 block">
                           {isCurrent
-                            ? 'Currently in progress at this station'
+                            ? 'In Progress'
                             : isCompleted
-                            ? 'Completed'
-                            : 'Upcoming step'}
-                        </p>
+                            ? 'Done'
+                            : 'Upcoming'}
+                        </span>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
+
+                {/* Active Step Highlight Banner in Middle */}
+                <div className="mt-4 p-3 rounded-2xl bg-blue-50/80 border border-blue-200/80 text-center">
+                  <p className="text-xs font-bold text-blue-900">
+                    {effectiveStatus === 'processing' && '👕 Your clothes are currently being washed, pressed & cared for at our station.'}
+                    {effectiveStatus === 'done' && '🛍️ Your laundry is neatly packed and ready for pickup at the store counter!'}
+                    {effectiveStatus === 'claimed' && '✅ Order completed and handed over. Thank you for choosing us!'}
+                  </p>
+                </div>
               </div>
             </div>
 
