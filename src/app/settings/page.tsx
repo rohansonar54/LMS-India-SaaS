@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
-import BlurLoaderOverlay from '@/components/BlurLoaderOverlay';
 import { formatINR } from '@/lib/currency';
 import { Plus, Edit2, Trash2, Shirt, Layers, Sparkles, CheckCircle2, XCircle } from 'lucide-react';
 
@@ -182,20 +181,20 @@ export default function SettingsPage() {
     const method = editingServiceId ? 'PUT' : 'POST';
     const body = editingServiceId
       ? {
-        id: editingServiceId,
-        name: serviceName.trim(),
-        category: serviceCategory,
-        defaultPrice: Number(serviceDefaultPrice) || 0,
-        description: serviceDesc.trim(),
-        active: serviceActive,
-      }
+          id: editingServiceId,
+          name: serviceName.trim(),
+          category: serviceCategory,
+          defaultPrice: Number(serviceDefaultPrice) || 0,
+          description: serviceDesc.trim(),
+          active: serviceActive,
+        }
       : {
-        name: serviceName.trim(),
-        category: serviceCategory,
-        defaultPrice: Number(serviceDefaultPrice) || 0,
-        description: serviceDesc.trim(),
-        active: serviceActive,
-      };
+          name: serviceName.trim(),
+          category: serviceCategory,
+          defaultPrice: Number(serviceDefaultPrice) || 0,
+          description: serviceDesc.trim(),
+          active: serviceActive,
+        };
 
     const res = await fetch('/api/services', {
       method,
@@ -306,30 +305,33 @@ export default function SettingsPage() {
             <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-2xl bg-slate-100">
               <button
                 onClick={() => setActiveTab('garments')}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${activeTab === 'garments'
-                  ? 'bg-white text-blue-600 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-                  }`}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
+                  activeTab === 'garments'
+                    ? 'bg-white text-blue-600 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
               >
                 <Shirt className="w-4 h-4" />
                 <span>Garment Master ({clothingItems.length})</span>
               </button>
               <button
                 onClick={() => setActiveTab('services')}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${activeTab === 'services'
-                  ? 'bg-white text-blue-600 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-                  }`}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
+                  activeTab === 'services'
+                    ? 'bg-white text-blue-600 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
               >
                 <Sparkles className="w-4 h-4" />
                 <span>Services Master ({services.length})</span>
               </button>
               <button
                 onClick={() => setActiveTab('weight')}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${activeTab === 'weight'
-                  ? 'bg-white text-blue-600 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-                  }`}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
+                  activeTab === 'weight'
+                    ? 'bg-white text-blue-600 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
               >
                 <Layers className="w-4 h-4" />
                 <span>Bulk & Measurement Rates ({prices.length})</span>
@@ -377,77 +379,78 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <BlurLoaderOverlay
-                loading={loading}
-                text="Loading Settings..."
-              >
-                <div className="overflow-x-auto min-h-[220px]">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px]">
-                        <th className="py-3 px-4">Garment Item</th>
-                        <th className="py-3 px-4">Category</th>
-                        {activeServices.map((svc) => (
-                          <th key={svc._id} className="py-3 px-4">
-                            {svc.name}
-                          </th>
-                        ))}
-                        <th className="py-3 px-4 text-right">Actions</th>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px]">
+                      <th className="py-3 px-4">Garment Item</th>
+                      <th className="py-3 px-4">Category</th>
+                      {activeServices.map((svc) => (
+                        <th key={svc._id} className="py-3 px-4">
+                          {svc.name}
+                        </th>
+                      ))}
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {loading ? (
+                      <tr>
+                        <td colSpan={3 + activeServices.length} className="py-8 text-center text-slate-400">
+                          Loading garment rates...
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {clothingItems.length === 0 ? (
-                        <tr>
-                          <td colSpan={3 + activeServices.length} className="py-12 text-center text-slate-400">
-                            {loading ? 'Preparing garment catalog...' : 'No items found.'}
+                    ) : clothingItems.length === 0 ? (
+                      <tr>
+                        <td colSpan={3 + activeServices.length} className="py-8 text-center text-slate-400">
+                          No items found.
+                        </td>
+                      </tr>
+                    ) : (
+                      clothingItems.map((item) => (
+                        <tr key={item._id} className="hover:bg-slate-50 transition">
+                          <td className="py-3 px-4 font-bold text-slate-900 flex items-center space-x-2">
+                            <span>{item.icon || '👕'}</span>
+                            <span>{item.name}</span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-semibold">
+                              {item.category || 'General'}
+                            </span>
+                          </td>
+                          {activeServices.map((svc) => {
+                            const foundSvc = item.services.find((s) => s.serviceName === svc.name);
+                            const price = foundSvc ? foundSvc.price : svc.defaultPrice;
+                            return (
+                              <td key={svc._id} className="py-3 px-4 font-mono font-bold text-slate-800">
+                                {price !== undefined ? formatINR(price) : '-'}
+                              </td>
+                            );
+                          })}
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end space-x-1">
+                              <button
+                                onClick={() => handleOpenEditItem(item)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-slate-100"
+                                title="Edit Garment Rates"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteItem(item._id)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-slate-100"
+                                title="Delete Garment"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
-                      ) : (
-                        clothingItems.map((item) => (
-                          <tr key={item._id} className="hover:bg-slate-50 transition">
-                            <td className="py-3 px-4 font-bold text-slate-900 flex items-center space-x-2">
-                              <span>{item.icon || '👕'}</span>
-                              <span>{item.name}</span>
-                            </td>
-                            <td className="py-3 px-4">
-                              <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-semibold">
-                                {item.category || 'General'}
-                              </span>
-                            </td>
-                            {activeServices.map((svc) => {
-                              const foundSvc = item.services.find((s) => s.serviceName === svc.name);
-                              const price = foundSvc ? foundSvc.price : svc.defaultPrice;
-                              return (
-                                <td key={svc._id} className="py-3 px-4 font-mono font-bold text-slate-800">
-                                  {price !== undefined ? formatINR(price) : '-'}
-                                </td>
-                              );
-                            })}
-                            <td className="py-3 px-4 text-right">
-                              <div className="flex items-center justify-end space-x-1">
-                                <button
-                                  onClick={() => handleOpenEditItem(item)}
-                                  className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-slate-100"
-                                  title="Edit Garment Rates"
-                                >
-                                  <Edit2 className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteItem(item._id)}
-                                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-slate-100"
-                                  title="Delete Garment"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </BlurLoaderOverlay>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
@@ -461,84 +464,84 @@ export default function SettingsPage() {
                 </p>
               </div>
 
-              <BlurLoaderOverlay
-                loading={loading}
-                text="Loading Services..."
-              >
-                <div className="overflow-x-auto min-h-[220px]">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px]">
-                        <th className="py-3 px-4">Service Name</th>
-                        <th className="py-3 px-4">Category</th>
-                        <th className="py-3 px-4">Base Default Rate (₹)</th>
-                        <th className="py-3 px-4">Description</th>
-                        <th className="py-3 px-4">Status</th>
-                        <th className="py-3 px-4 text-right">Actions</th>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px]">
+                      <th className="py-3 px-4">Service Name</th>
+                      <th className="py-3 px-4">Category</th>
+                      <th className="py-3 px-4">Base Default Rate (₹)</th>
+                      <th className="py-3 px-4">Description</th>
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {loading ? (
+                      <tr>
+                        <td colSpan={6} className="py-8 text-center text-slate-400">Loading services...</td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {services.length === 0 ? (
-                        <tr>
-                          <td colSpan={6} className="py-12 text-center text-slate-400">
-                            {loading ? 'Preparing services list...' : 'No services found. Click "+ Add New Service" above.'}
+                    ) : services.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-8 text-center text-slate-400">
+                          No services found. Click &quot;+ Add New Service&quot; above.
+                        </td>
+                      </tr>
+                    ) : (
+                      services.map((s) => (
+                        <tr key={s._id} className="hover:bg-slate-50 transition">
+                          <td className="py-3 px-4 font-bold text-slate-900 flex items-center space-x-2">
+                            <span className="w-2 h-2 rounded-full bg-blue-500" />
+                            <span>{s.name}</span>
                           </td>
-                        </tr>
-                      ) : (
-                        services.map((s) => (
-                          <tr key={s._id} className="hover:bg-slate-50 transition">
-                            <td className="py-3 px-4 font-bold text-slate-900 flex items-center space-x-2">
-                              <span className="w-2 h-2 rounded-full bg-blue-500" />
-                              <span>{s.name}</span>
-                            </td>
-                            <td className="py-3 px-4">
-                              <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-semibold">
-                                {s.category || 'Laundry'}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4 font-mono font-bold text-blue-600">
-                              {formatINR(s.defaultPrice)}
-                            </td>
-                            <td className="py-3 px-4 text-slate-500 text-[11px] max-w-xs truncate">
-                              {s.description || '—'}
-                            </td>
-                            <td className="py-3 px-4">
-                              <button
-                                onClick={() => handleToggleServiceActive(s)}
-                                className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold transition ${s.active
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-semibold">
+                              {s.category || 'Laundry'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 font-mono font-bold text-blue-600">
+                            {formatINR(s.defaultPrice)}
+                          </td>
+                          <td className="py-3 px-4 text-slate-500 text-[11px] max-w-xs truncate">
+                            {s.description || '—'}
+                          </td>
+                          <td className="py-3 px-4">
+                            <button
+                              onClick={() => handleToggleServiceActive(s)}
+                              className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold transition ${
+                                s.active
                                   ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
                                   : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                                  }`}
+                              }`}
+                            >
+                              {s.active ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                              <span>{s.active ? 'Active' : 'Disabled'}</span>
+                            </button>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end space-x-1">
+                              <button
+                                onClick={() => handleOpenEditService(s)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-slate-100"
+                                title="Edit Service"
                               >
-                                {s.active ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                                <span>{s.active ? 'Active' : 'Disabled'}</span>
+                                <Edit2 className="w-3.5 h-3.5" />
                               </button>
-                            </td>
-                            <td className="py-3 px-4 text-right">
-                              <div className="flex items-center justify-end space-x-1">
-                                <button
-                                  onClick={() => handleOpenEditService(s)}
-                                  className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-slate-100"
-                                  title="Edit Service"
-                                >
-                                  <Edit2 className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteService(s._id, s.name)}
-                                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-slate-100"
-                                  title="Delete Service"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </BlurLoaderOverlay>
+                              <button
+                                onClick={() => handleDeleteService(s._id, s.name)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-slate-100"
+                                title="Delete Service"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
@@ -550,58 +553,55 @@ export default function SettingsPage() {
                 <p className="text-xs text-slate-500">Configured packages are available as quick-add items during order booking</p>
               </div>
 
-              <BlurLoaderOverlay
-                loading={loading}
-                text="Loading Packages..."
-              >
-                <div className="overflow-x-auto min-h-[220px]">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px]">
-                        <th className="py-3 px-4">Service Package</th>
-                        <th className="py-3 px-4">Unit</th>
-                        <th className="py-3 px-4">Rate (₹)</th>
-                        <th className="py-3 px-4 text-right">Actions</th>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px]">
+                      <th className="py-3 px-4">Service Package</th>
+                      <th className="py-3 px-4">Unit</th>
+                      <th className="py-3 px-4">Rate (₹)</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {loading ? (
+                      <tr>
+                        <td colSpan={4} className="py-8 text-center text-slate-400">Loading packages...</td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {prices.length === 0 ? (
-                        <tr>
-                          <td colSpan={4} className="py-12 text-center text-slate-400">
-                            {loading ? 'Preparing packages list...' : 'No packages configured. Click "+ Add Package / Rate" above.'}
+                    ) : prices.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="py-8 text-center text-slate-400">No packages configured. Click &quot;+ Add Package / Rate&quot; above.</td>
+                      </tr>
+                    ) : (
+                      prices.map((p) => (
+                        <tr key={p._id} className="hover:bg-slate-50 transition">
+                          <td className="py-3 px-4 font-bold text-slate-900">{p.name}</td>
+                          <td className="py-3 px-4 font-mono uppercase text-slate-600">{p.unit}</td>
+                          <td className="py-3 px-4 font-mono font-bold text-blue-600">{formatINR(p.price)} / {p.unit}</td>
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end space-x-1">
+                              <button
+                                onClick={() => handleOpenEditWeight(p)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-slate-100"
+                                title="Edit Package"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteWeight(p._id, p.name)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-slate-100"
+                                title="Delete Package"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
-                      ) : (
-                        prices.map((p) => (
-                          <tr key={p._id} className="hover:bg-slate-50 transition">
-                            <td className="py-3 px-4 font-bold text-slate-900">{p.name}</td>
-                            <td className="py-3 px-4 font-mono uppercase text-slate-600">{p.unit}</td>
-                            <td className="py-3 px-4 font-mono font-bold text-blue-600">{formatINR(p.price)} / {p.unit}</td>
-                            <td className="py-3 px-4 text-right">
-                              <div className="flex items-center justify-end space-x-1">
-                                <button
-                                  onClick={() => handleOpenEditWeight(p)}
-                                  className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-slate-100"
-                                  title="Edit Package"
-                                >
-                                  <Edit2 className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteWeight(p._id, p.name)}
-                                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-slate-100"
-                                  title="Delete Package"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </BlurLoaderOverlay>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </main>

@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import Pagination from '@/components/Pagination';
-import BlurLoaderOverlay from '@/components/BlurLoaderOverlay';
 import { Shield, Plus, Trash2, Pencil, Key, User, Building2, Check, AlertCircle } from 'lucide-react';
 
 interface StaffUser {
@@ -202,29 +201,27 @@ export default function StaffPage() {
 
           {/* Staff Table */}
           <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
-            <BlurLoaderOverlay
-              loading={loading}
-              text="Loading Staff..."
-            >
-              <div className="overflow-x-auto min-h-[220px]">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px] tracking-wider">
-                      <th className="py-3 px-4">Staff Name</th>
-                      <th className="py-3 px-4">Username</th>
-                      <th className="py-3 px-4">Assigned Location</th>
-                      <th className="py-3 px-4">Role Level</th>
-                      <th className="py-3 px-4 text-right">Actions</th>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px] tracking-wider">
+                    <th className="py-3 px-4">Staff Name</th>
+                    <th className="py-3 px-4">Username</th>
+                    <th className="py-3 px-4">Assigned Location</th>
+                    <th className="py-3 px-4">Role Level</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-slate-400">Loading staff records...</td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {staffList.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="py-12 text-center text-slate-400">
-                          {loading ? 'Preparing staff directory...' : 'No staff members found.'}
-                        </td>
-                      </tr>
-                    ) : (
+                  ) : staffList.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-slate-400">No staff members found.</td>
+                    </tr>
+                  ) : (
                     staffList
                       .slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
                       .map((s) => (
@@ -243,8 +240,9 @@ export default function StaffPage() {
                             </span>
                           </td>
                           <td className="py-3 px-4">
-                            <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] uppercase ${s.level === 0 ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-700'
-                              }`}>
+                            <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] uppercase ${
+                              s.level === 0 ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-700'
+                            }`}>
                               {s.level === 0 ? 'Admin' : 'Front Desk Staff'}
                             </span>
                           </td>
@@ -272,7 +270,6 @@ export default function StaffPage() {
                 </tbody>
               </table>
             </div>
-            </BlurLoaderOverlay>
 
             {/* Pagination Controls */}
             {!loading && staffList.length > 0 && (
@@ -402,8 +399,8 @@ export default function StaffPage() {
                   {formSubmitting
                     ? 'Saving...'
                     : editingStaff
-                      ? 'Save Changes'
-                      : 'Create Staff'}
+                    ? 'Save Changes'
+                    : 'Create Staff'}
                 </button>
               </div>
             </form>

@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import Link from 'next/link';
-import SimpleLaundryLoader from '@/components/SimpleLaundryLoader';
 import { CheckCircle2, Clock, ArrowLeft, AlertCircle, Building2 } from 'lucide-react';
 import { formatINR } from '@/lib/currency';
 import { ALL_STAGES, WorkflowStageKey, normalizeWorkflowStages } from '@/lib/workflow';
@@ -80,8 +79,9 @@ export default function OrderTrackingClient({ orderNumber }: { orderNumber: stri
         </div>
 
         {loading ? (
-          <div className="py-12 flex justify-center">
-            <SimpleLaundryLoader text="Tracking Order..." />
+          <div className="py-16 text-center text-slate-400 text-sm flex flex-col items-center justify-center space-y-3">
+            <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <span>Fetching real-time laundry status...</span>
           </div>
         ) : error || !order ? (
           <div className="py-12 text-center space-y-4">
@@ -155,24 +155,26 @@ export default function OrderTrackingClient({ orderNumber }: { orderNumber: stri
                   return (
                     <div key={stepKey} className="flex items-center space-x-4">
                       <div
-                        className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 transition-all ${isCompleted
-                          ? 'bg-emerald-500 text-white'
-                          : isCurrent
+                        className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 transition-all ${
+                          isCompleted
+                            ? 'bg-emerald-500 text-white'
+                            : isCurrent
                             ? 'bg-blue-600 text-white ring-4 ring-blue-100 scale-110 shadow-md'
                             : 'bg-slate-100 text-slate-400 border border-slate-200'
-                          }`}
+                        }`}
                       >
                         {isCompleted ? <CheckCircle2 className="w-5 h-5" /> : stageInfo.icon}
                       </div>
 
                       <div className="flex-1 min-w-0">
                         <p
-                          className={`text-xs sm:text-sm font-bold ${isCurrent
-                            ? 'text-blue-600'
-                            : isCompleted
+                          className={`text-xs sm:text-sm font-bold ${
+                            isCurrent
+                              ? 'text-blue-600'
+                              : isCompleted
                               ? 'text-slate-800'
                               : 'text-slate-400'
-                            }`}
+                          }`}
                         >
                           {stageInfo.label}
                         </p>
@@ -180,8 +182,8 @@ export default function OrderTrackingClient({ orderNumber }: { orderNumber: stri
                           {isCurrent
                             ? 'Currently in progress at this station'
                             : isCompleted
-                              ? 'Completed'
-                              : 'Upcoming step'}
+                            ? 'Completed'
+                            : 'Upcoming step'}
                         </p>
                       </div>
                     </div>

@@ -5,7 +5,6 @@ import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import Pagination from '@/components/Pagination';
 import ReceiptModal, { ReceiptOrder } from '@/components/ReceiptModal';
-import BlurLoaderOverlay from '@/components/BlurLoaderOverlay';
 import { formatINR } from '@/lib/currency';
 import {
   ShoppingBag,
@@ -435,70 +434,77 @@ export default function OrdersPage() {
               <button
                 type="button"
                 onClick={() => handleSelectPreset('today')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-2xs ${datePreset === 'today' && !customStartDate && !quickSearch
-                  ? 'bg-blue-600 text-white shadow-blue-500/20'
-                  : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
-                  }`}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-2xs ${
+                  datePreset === 'today' && !customStartDate && !quickSearch
+                    ? 'bg-blue-600 text-white shadow-blue-500/20'
+                    : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
+                }`}
               >
                 Today
               </button>
               <button
                 type="button"
                 onClick={() => handleSelectPreset('yesterday')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-2xs ${datePreset === 'yesterday' && !customStartDate && !quickSearch
-                  ? 'bg-blue-600 text-white shadow-blue-500/20'
-                  : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
-                  }`}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-2xs ${
+                  datePreset === 'yesterday' && !customStartDate && !quickSearch
+                    ? 'bg-blue-600 text-white shadow-blue-500/20'
+                    : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
+                }`}
               >
                 Yesterday
               </button>
               <button
                 type="button"
                 onClick={() => handleSelectPreset('this_week')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-2xs ${datePreset === 'this_week' && !customStartDate && !quickSearch
-                  ? 'bg-blue-600 text-white shadow-blue-500/20'
-                  : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
-                  }`}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-2xs ${
+                  datePreset === 'this_week' && !customStartDate && !quickSearch
+                    ? 'bg-blue-600 text-white shadow-blue-500/20'
+                    : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
+                }`}
               >
                 This Week
               </button>
               <button
                 type="button"
                 onClick={() => handleSelectPreset('month_to_date')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-2xs ${datePreset === 'month_to_date' && !customStartDate && !quickSearch
-                  ? 'bg-blue-600 text-white shadow-blue-500/20'
-                  : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
-                  }`}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-2xs ${
+                  datePreset === 'month_to_date' && !customStartDate && !quickSearch
+                    ? 'bg-blue-600 text-white shadow-blue-500/20'
+                    : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
+                }`}
               >
                 Month to Date
               </button>
               <button
                 type="button"
                 onClick={() => handleSelectPreset('last_month')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-2xs ${datePreset === 'last_month' && !customStartDate && !quickSearch
-                  ? 'bg-blue-600 text-white shadow-blue-500/20'
-                  : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
-                  }`}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-2xs ${
+                  datePreset === 'last_month' && !customStartDate && !quickSearch
+                    ? 'bg-blue-600 text-white shadow-blue-500/20'
+                    : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
+                }`}
               >
                 Last Month
               </button>
               <button
                 type="button"
                 onClick={() => handleSelectPreset('year_to_date')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-2xs ${datePreset === 'year_to_date' && !customStartDate && !quickSearch
-                  ? 'bg-blue-600 text-white shadow-blue-500/20'
-                  : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
-                  }`}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-2xs ${
+                  datePreset === 'year_to_date' && !customStartDate && !quickSearch
+                    ? 'bg-blue-600 text-white shadow-blue-500/20'
+                    : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
+                }`}
               >
                 Year to Date
               </button>
               <button
                 type="button"
                 onClick={() => handleSelectPreset('all')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-2xs ${(datePreset === 'all' || !!quickSearch) && !customStartDate && !customEndDate
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-white hover:bg-slate-50 text-slate-500 border border-slate-200'
-                  }`}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-2xs ${
+                  (datePreset === 'all' || !!quickSearch) && !customStartDate && !customEndDate
+                    ? 'bg-slate-900 text-white'
+                    : 'bg-white hover:bg-slate-50 text-slate-500 border border-slate-200'
+                }`}
               >
                 All Time
               </button>
@@ -532,10 +538,11 @@ export default function OrdersPage() {
               <button
                 type="button"
                 onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
-                className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl border text-xs font-bold transition shadow-2xs shrink-0 ${showAdvancedSearch || hasActiveAdvancedFilters
-                  ? 'bg-blue-50 border-blue-300 text-blue-700'
-                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                  }`}
+                className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl border text-xs font-bold transition shadow-2xs shrink-0 ${
+                  showAdvancedSearch || hasActiveAdvancedFilters
+                    ? 'bg-blue-50 border-blue-300 text-blue-700'
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                }`}
               >
                 <Filter className="w-3.5 h-3.5 text-slate-500" />
                 <span>Advanced Search</span>
@@ -731,186 +738,185 @@ export default function OrdersPage() {
               </div>
             </div>
 
-            <BlurLoaderOverlay
-              loading={loading}
-              text="Loading Orders..."
-            >
-              <div className="overflow-x-auto min-h-[220px]">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 uppercase font-bold text-[10px]">
-                      <th className="py-3 px-3.5 cursor-pointer select-none" onClick={() => toggleSort('createdAt')}>
-                        <div className="flex items-center space-x-1">
-                          <span>Date & Time</span>
-                          <ArrowUpDown className="w-3 h-3 text-slate-400" />
-                        </div>
-                      </th>
-                      <th className="py-3 px-3">Order #</th>
-                      <th className="py-3 px-3">Customer</th>
-                      <th className="py-3 px-3">Branch / Location</th>
-                      <th className="py-3 px-3 cursor-pointer select-none" onClick={() => toggleSort('total')}>
-                        <div className="flex items-center space-x-1">
-                          <span>Total</span>
-                          <ArrowUpDown className="w-3 h-3 text-slate-400" />
-                        </div>
-                      </th>
-                      <th className="py-3 px-3">Paid</th>
-                      <th className="py-3 px-3">Balance</th>
-                      <th className="py-3 px-3">Status</th>
-                      <th className="py-3 px-3">Payment / Handover</th>
-                      <th className="py-3 px-3.5 text-right">Slip / Receipt</th>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 uppercase font-bold text-[10px]">
+                    <th className="py-3 px-3.5 cursor-pointer select-none" onClick={() => toggleSort('createdAt')}>
+                      <div className="flex items-center space-x-1">
+                        <span>Date & Time</span>
+                        <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                      </div>
+                    </th>
+                    <th className="py-3 px-3">Order #</th>
+                    <th className="py-3 px-3">Customer</th>
+                    <th className="py-3 px-3">Branch / Location</th>
+                    <th className="py-3 px-3 cursor-pointer select-none" onClick={() => toggleSort('total')}>
+                      <div className="flex items-center space-x-1">
+                        <span>Total</span>
+                        <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                      </div>
+                    </th>
+                    <th className="py-3 px-3">Paid</th>
+                    <th className="py-3 px-3">Balance</th>
+                    <th className="py-3 px-3">Status</th>
+                    <th className="py-3 px-3">Payment / Handover</th>
+                    <th className="py-3 px-3.5 text-right">Slip / Receipt</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={10} className="py-12 text-center text-slate-400 font-medium">
+                        Loading orders...
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {paginatedOrders.length === 0 ? (
-                      <tr>
-                        <td colSpan={10} className="py-16 text-center">
-                          <ShoppingBag className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                          <p className="text-sm font-bold text-slate-700">
-                            {loading ? 'Preparing orders...' : 'No orders found'}
-                          </p>
-                          <p className="text-xs text-slate-400 mt-0.5">
-                            {loading ? 'Please wait a moment' : 'Try adjusting your date range or clear the search filter above'}
-                          </p>
-                        </td>
-                      </tr>
-                    ) : (
-                      paginatedOrders.map((ro) => {
-                        const dt = formatDateTime(ro.createdAt);
-                        const balance =
-                          ro.balance !== undefined ? ro.balance : Math.max(0, ro.total - ro.amountPaid);
+                  ) : paginatedOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className="py-12 text-center">
+                        <ShoppingBag className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                        <p className="text-sm font-bold text-slate-700">No orders found</p>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          Try adjusting your date range or clear the search filter above
+                        </p>
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedOrders.map((ro) => {
+                      const dt = formatDateTime(ro.createdAt);
+                      const balance =
+                        ro.balance !== undefined ? ro.balance : Math.max(0, ro.total - ro.amountPaid);
 
-                        return (
-                          <tr key={ro.orderNumber} className="hover:bg-slate-50 transition">
-                            {/* Date & Time Column (User Requested) */}
-                            <td className="py-3 px-3.5 whitespace-nowrap">
-                              <div className="font-semibold text-slate-900 text-xs">{dt.datePart}</div>
-                              <div className="text-[10px] text-slate-400 font-medium">{dt.timePart}</div>
-                            </td>
+                      return (
+                        <tr key={ro.orderNumber} className="hover:bg-slate-50 transition">
+                          {/* Date & Time Column (User Requested) */}
+                          <td className="py-3 px-3.5 whitespace-nowrap">
+                            <div className="font-semibold text-slate-900 text-xs">{dt.datePart}</div>
+                            <div className="text-[10px] text-slate-400 font-medium">{dt.timePart}</div>
+                          </td>
 
-                            {/* Order Number */}
-                            <td className="py-3 px-3 font-mono font-bold text-blue-600 whitespace-nowrap">
-                              #{ro.orderNumber.replace(/^#/, '')}
-                            </td>
+                          {/* Order Number */}
+                          <td className="py-3 px-3 font-mono font-bold text-blue-600 whitespace-nowrap">
+                            #{ro.orderNumber.replace(/^#/, '')}
+                          </td>
 
-                            {/* Customer */}
-                            <td className="py-3 px-3">
-                              <div className="font-semibold text-slate-800">{ro.customerName}</div>
-                              {ro.customerContact && (
-                                <div className="text-[10px] font-mono text-slate-400">{ro.customerContact}</div>
-                              )}
-                            </td>
+                          {/* Customer */}
+                          <td className="py-3 px-3">
+                            <div className="font-semibold text-slate-800">{ro.customerName}</div>
+                            {ro.customerContact && (
+                              <div className="text-[10px] font-mono text-slate-400">{ro.customerContact}</div>
+                            )}
+                          </td>
 
-                            {/* Branch / Location */}
-                            <td className="py-3 px-3 whitespace-nowrap">
-                              <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 text-[11px] font-medium">
-                                <Building2 className="w-3 h-3 text-slate-400" />
-                                <span>{ro.locationName || 'Main Branch'}</span>
-                              </span>
-                            </td>
+                          {/* Branch / Location */}
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 text-[11px] font-medium">
+                              <Building2 className="w-3 h-3 text-slate-400" />
+                              <span>{ro.locationName || 'Main Branch'}</span>
+                            </span>
+                          </td>
 
-                            {/* Total */}
-                            <td className="py-3 px-3 font-mono font-bold text-slate-900 whitespace-nowrap">
-                              {formatINR(ro.total)}
-                            </td>
+                          {/* Total */}
+                          <td className="py-3 px-3 font-mono font-bold text-slate-900 whitespace-nowrap">
+                            {formatINR(ro.total)}
+                          </td>
 
-                            {/* Paid */}
-                            <td className="py-3 px-3 font-mono font-semibold text-emerald-600 whitespace-nowrap">
-                              {formatINR(ro.amountPaid)}
-                            </td>
+                          {/* Paid */}
+                          <td className="py-3 px-3 font-mono font-semibold text-emerald-600 whitespace-nowrap">
+                            {formatINR(ro.amountPaid)}
+                          </td>
 
-                            {/* Balance */}
-                            <td className="py-3 px-3 font-mono font-bold whitespace-nowrap">
-                              {balance > 0 ? (
-                                <span className="text-rose-600">{formatINR(balance)}</span>
-                              ) : (
-                                <span className="text-emerald-700 text-[11px] font-semibold">₹0 (Paid)</span>
-                              )}
-                            </td>
+                          {/* Balance */}
+                          <td className="py-3 px-3 font-mono font-bold whitespace-nowrap">
+                            {balance > 0 ? (
+                              <span className="text-rose-600">{formatINR(balance)}</span>
+                            ) : (
+                              <span className="text-emerald-700 text-[11px] font-semibold">₹0 (Paid)</span>
+                            )}
+                          </td>
 
-                            {/* Order Status Column */}
-                            <td className="py-3 px-3 whitespace-nowrap">
-                              <span
-                                className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${getStatusBadge(
-                                  ro.status
-                                )}`}
-                              >
-                                {ro.status === 'ready' || ro.status === 'done'
-                                  ? 'Ready for Pickup'
-                                  : ro.status.replace(/_/g, ' ')}
-                              </span>
-                            </td>
+                          {/* Order Status Column */}
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            <span
+                              className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${getStatusBadge(
+                                ro.status
+                              )}`}
+                            >
+                              {ro.status === 'ready' || ro.status === 'done'
+                                ? 'Ready for Pickup'
+                                : ro.status.replace(/_/g, ' ')}
+                            </span>
+                          </td>
 
-                            {/* Dedicated Payment / Handover Action Column */}
-                            <td className="py-3 px-3 whitespace-nowrap">
-                              {/* Case 1: Order Completed & Ready for Pickup */}
-                              {ro.status === 'ready' || ro.status === 'done' ? (
-                                balance > 0 ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenCollect(ro)}
-                                    className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition shadow-2xs active:scale-95"
-                                    title="Order completed & ready for pickup - Collect remaining balance and handover"
-                                  >
-                                    <CreditCard className="w-3.5 h-3.5" />
-                                    <span>Collect ₹{balance} & Handover</span>
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDirectHandover(ro)}
-                                    className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-300 transition shadow-2xs active:scale-95"
-                                    title="Order is fully paid - Click to mark clothes as handed over to customer"
-                                  >
-                                    <Check className="w-3.5 h-3.5 text-blue-600" />
-                                    <span>Handover Clothes</span>
-                                  </button>
-                                )
-                              ) : balance > 0 ? (
-                                /* Case 2: Order in other stages (Washing, Drying, Ironing) with pending dues */
+                          {/* Dedicated Payment / Handover Action Column */}
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            {/* Case 1: Order Completed & Ready for Pickup */}
+                            {ro.status === 'ready' || ro.status === 'done' ? (
+                              balance > 0 ? (
                                 <button
                                   type="button"
                                   onClick={() => handleOpenCollect(ro)}
-                                  className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 transition shadow-2xs active:scale-95"
-                                  title="Collect pending payment"
+                                  className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition shadow-2xs active:scale-95"
+                                  title="Order completed & ready for pickup - Collect remaining balance and handover"
                                 >
-                                  <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
-                                  <span>Collect ₹{balance}</span>
+                                  <CreditCard className="w-3.5 h-3.5" />
+                                  <span>Collect ₹{balance} & Handover</span>
                                 </button>
-                              ) : ro.status === 'claimed' ? (
-                                /* Case 3: Order already collected & delivered to customer */
-                                <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold">
-                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                                  <span>Delivered & Paid</span>
-                                </span>
                               ) : (
-                                /* Case 4: Order in progress, already fully paid */
-                                <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-semibold">
-                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                                  <span>Fully Paid</span>
-                                </span>
-                              )}
-                            </td>
-
-                            {/* Slip Button */}
-                            <td className="py-3 px-3.5 text-right whitespace-nowrap">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDirectHandover(ro)}
+                                  className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-300 transition shadow-2xs active:scale-95"
+                                  title="Order is fully paid - Click to mark clothes as handed over to customer"
+                                >
+                                  <Check className="w-3.5 h-3.5 text-blue-600" />
+                                  <span>Handover Clothes</span>
+                                </button>
+                              )
+                            ) : balance > 0 ? (
+                              /* Case 2: Order in other stages (Washing, Drying, Ironing) with pending dues */
                               <button
                                 type="button"
-                                onClick={() => setSelectedReceiptOrder(ro)}
-                                className="px-3 py-1 rounded-xl border border-slate-300 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 text-slate-700 text-xs font-semibold inline-flex items-center space-x-1.5 transition shadow-2xs active:scale-95"
+                                onClick={() => handleOpenCollect(ro)}
+                                className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 transition shadow-2xs active:scale-95"
+                                title="Collect pending payment"
                               >
-                                <Printer className="w-3.5 h-3.5" />
-                                <span>Slip</span>
+                                <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Collect ₹{balance}</span>
                               </button>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </BlurLoaderOverlay>
+                            ) : ro.status === 'claimed' ? (
+                              /* Case 3: Order already collected & delivered to customer */
+                              <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                                <span>Delivered & Paid</span>
+                              </span>
+                            ) : (
+                              /* Case 4: Order in progress, already fully paid */
+                              <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-semibold">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                                <span>Fully Paid</span>
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Slip Button */}
+                          <td className="py-3 px-3.5 text-right whitespace-nowrap">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedReceiptOrder(ro)}
+                              className="px-3 py-1 rounded-xl border border-slate-300 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 text-slate-700 text-xs font-semibold inline-flex items-center space-x-1.5 transition shadow-2xs active:scale-95"
+                            >
+                              <Printer className="w-3.5 h-3.5" />
+                              <span>Slip</span>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
 
             {/* Pagination */}
             {!loading && filteredAndSortedOrders.length > PAGE_SIZE && (
@@ -985,10 +991,11 @@ export default function OrdersPage() {
                       key={m}
                       type="button"
                       onClick={() => setPayMethod(m)}
-                      className={`py-2 text-xs font-bold rounded-xl border transition flex items-center justify-center space-x-1 ${payMethod === m
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                        : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
-                        }`}
+                      className={`py-2 text-xs font-bold rounded-xl border transition flex items-center justify-center space-x-1 ${
+                        payMethod === m
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                          : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                      }`}
                     >
                       <span>{m === 'Cash' ? '💵 Cash' : m === 'UPI' ? '📱 UPI' : '💳 Card'}</span>
                     </button>

@@ -87,36 +87,3 @@ body {
   }
 }
 
-/* Modern Laundry Iron & Steam Animations */
-@keyframes ironGlide {
-  0%, 100% {
-    transform: translateX(-6px) rotate(-1.5deg);
-  }
-  50% {
-    transform: translateX(6px) rotate(1.5deg);
-  }
-}
-
-@keyframes steamRise {
-  0% {
-    opacity: 0;
-    transform: translateY(3px) scale(0.8);
-  }
-  40% {
-    opacity: 0.85;
-    transform: translateY(-4px) scale(1.1);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-10px) scale(1.3);
-  }
-}
-
-.animate-iron-glide {
-  animation: ironGlide 2s ease-in-out infinite;
-}
-
-.animate-steam-rise {
-  animation: steamRise 1.6s ease-out infinite;
-}
-
