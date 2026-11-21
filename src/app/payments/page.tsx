@@ -303,13 +303,13 @@ function PaymentsContent() {
           </div>
 
           {/* Tab Switcher & Search Bar */}
-          <div ref={paymentsTableRef} className="scroll-mt-20 bg-white p-4 rounded-3xl border border-slate-200 shadow-xs space-y-3">
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div ref={paymentsTableRef} className="scroll-mt-20 bg-white p-3.5 sm:p-4 rounded-3xl border border-slate-200 shadow-xs space-y-3">
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
               {/* Tabs */}
-              <div className="flex items-center space-x-1.5 p-1 rounded-2xl bg-slate-100">
+              <div className="flex items-center space-x-1.5 p-1 rounded-2xl bg-slate-100 w-full sm:w-auto">
                 <button
                   onClick={() => setActiveTab('balances')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+                  className={`flex-1 sm:flex-initial text-center px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition ${
                     activeTab === 'balances'
                       ? 'bg-white text-blue-600 shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
@@ -319,7 +319,7 @@ function PaymentsContent() {
                 </button>
                 <button
                   onClick={() => setActiveTab('history')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+                  className={`flex-1 sm:flex-initial text-center px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition ${
                     activeTab === 'history'
                       ? 'bg-white text-blue-600 shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
@@ -330,31 +330,43 @@ function PaymentsContent() {
               </div>
 
               {/* Search & Method Filter */}
-              <div className="flex items-center space-x-2">
-                <div className="relative flex-1 sm:w-64">
-                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    placeholder="Search name, phone, order #..."
-                    value={search}
-                    onChange={(e) => {
-                      setSearch(e.target.value);
-                      setBalancesPage(1);
-                      setHistoryPage(1);
-                    }}
-                    className="w-full pl-8 pr-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-slate-50"
-                  />
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center flex-wrap gap-2 w-full xl:w-auto">
+                {/* Search Bar + Mobile Refresh */}
+                <div className="flex items-center gap-2 flex-1 min-w-[180px]">
+                  <div className="relative flex-1 sm:w-60 md:w-64">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Search name, phone, order #..."
+                      value={search}
+                      onChange={(e) => {
+                        setSearch(e.target.value);
+                        setBalancesPage(1);
+                        setHistoryPage(1);
+                      }}
+                      className="w-full pl-8 pr-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-slate-50 hover:bg-white focus:bg-white transition"
+                    />
+                  </div>
+
+                  {/* Refresh Button on Mobile */}
+                  <button
+                    onClick={fetchPaymentsData}
+                    className="sm:hidden p-2 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-50 transition shrink-0"
+                    title="Refresh payments"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-600' : ''}`} />
+                  </button>
                 </div>
 
                 {activeTab === 'history' && (
-                  <>
+                  <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                     <select
                       value={methodFilter}
                       onChange={(e) => {
                         setMethodFilter(e.target.value);
                         setHistoryPage(1);
                       }}
-                      className="px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 bg-white"
+                      className="px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 bg-white shrink-0"
                     >
                       <option value="all">All Modes</option>
                       <option value="Cash">Cash</option>
@@ -363,21 +375,27 @@ function PaymentsContent() {
                       <option value="Net Banking">Net Banking</option>
                     </select>
 
-                    <div className="flex items-center space-x-1.5 bg-slate-50 border border-slate-300 rounded-xl px-2 py-1">
-                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                    <div className="flex items-center space-x-1 sm:space-x-1.5 bg-slate-50 border border-slate-300 rounded-xl px-2 sm:px-2.5 py-1.5 flex-1 sm:flex-initial min-w-0 max-w-full justify-between sm:justify-start">
+                      <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                       <input
                         type="date"
                         value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        className="text-xs bg-transparent focus:outline-none text-slate-700"
+                        onChange={(e) => {
+                          setStartDate(e.target.value);
+                          setHistoryPage(1);
+                        }}
+                        className="text-xs bg-transparent focus:outline-none text-slate-700 min-w-0 w-[100px] sm:w-28 text-center"
                         title="From Date"
                       />
-                      <span className="text-slate-400 text-xs">to</span>
+                      <span className="text-slate-400 text-xs shrink-0 px-0.5">to</span>
                       <input
                         type="date"
                         value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                        className="text-xs bg-transparent focus:outline-none text-slate-700"
+                        onChange={(e) => {
+                          setEndDate(e.target.value);
+                          setHistoryPage(1);
+                        }}
+                        className="text-xs bg-transparent focus:outline-none text-slate-700 min-w-0 w-[100px] sm:w-28 text-center"
                         title="To Date"
                       />
                       {(startDate || endDate) && (
@@ -386,19 +404,23 @@ function PaymentsContent() {
                           onClick={() => {
                             setStartDate('');
                             setEndDate('');
+                            setHistoryPage(1);
                           }}
-                          className="text-[10px] text-rose-500 font-bold hover:underline ml-1"
+                          className="text-[10px] text-rose-500 font-bold hover:underline shrink-0 ml-1 px-1 py-0.5 bg-rose-50 rounded"
+                          title="Clear date range"
                         >
                           Clear
                         </button>
                       )}
                     </div>
-                  </>
+                  </div>
                 )}
 
+                {/* Refresh Button on Desktop (sm and up) */}
                 <button
                   onClick={fetchPaymentsData}
-                  className="p-2 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-50 transition"
+                  className="hidden sm:inline-flex p-2 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-50 transition shrink-0"
+                  title="Refresh payments"
                 >
                   <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-600' : ''}`} />
                 </button>

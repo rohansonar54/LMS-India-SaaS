@@ -327,7 +327,7 @@ export default function QueuePage() {
           onMenuClick={() => setMobileMenuOpen(true)}
         />
 
-        <main className="p-3 sm:p-5 md:p-8 space-y-4 sm:space-y-6 flex-1 overflow-x-hidden max-w-7xl w-full mx-auto">
+        <main className="p-3 sm:p-5 md:p-8 space-y-4 sm:space-y-6 flex-1 max-w-7xl w-full mx-auto overflow-hidden md:overflow-visible">
           {/* Search & Comprehensive Filters Bar */}
           <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-xs space-y-3">
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
@@ -392,7 +392,7 @@ export default function QueuePage() {
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
-                All Orders ({orders.length})
+                All (Swipe) ({orders.length})
               </button>
               <button
                 onClick={() => setActiveTab('processing')}
@@ -430,8 +430,17 @@ export default function QueuePage() {
             </div>
           )}
 
-          {/* Simplified 2-Column Board (Grid on Desktop, Responsive Stack on Mobile) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
+          {/* Mobile Horizontal Swipe Instruction Hint */}
+          {activeTab === 'all' && (
+            <div className="md:hidden flex items-center justify-between text-[11px] font-semibold text-slate-500 px-1">
+              <span className="flex items-center space-x-1">
+                <span>👉 Swipe horizontally between <strong>Processing</strong> &amp; <strong>Ready for Pickup</strong></span>
+              </span>
+            </div>
+          )}
+
+          {/* Simplified 2-Column Board (2-Column Grid on Desktop, Horizontal Swipe Kanban on Mobile) */}
+          <div className="flex md:grid md:grid-cols-2 gap-4 sm:gap-5 items-start overflow-x-auto pb-4 md:pb-0 snap-x snap-mandatory scrollbar-thin -mx-3 px-3 sm:mx-0 sm:px-0">
             {boardColumns
               .filter((col) => activeTab === 'all' || activeTab === col.key)
               .map((col) => {
@@ -441,7 +450,11 @@ export default function QueuePage() {
                 return (
                   <div
                     key={col.key}
-                    className={`rounded-3xl p-4 sm:p-5 border flex flex-col min-h-[500px] transition-all ${
+                    className={`${
+                      activeTab === 'all'
+                        ? 'w-[88vw] sm:w-[420px] md:w-auto shrink-0 snap-start'
+                        : 'w-full md:w-auto shrink-0'
+                    } rounded-3xl p-4 sm:p-5 border flex flex-col min-h-[500px] transition-all ${
                       isProcessingCol
                         ? 'bg-slate-200/60 border-slate-300/80'
                         : 'bg-emerald-50/50 border-emerald-200/80'
