@@ -27,6 +27,7 @@ function CustomersContent() {
   const paramDatePreset = searchParams.get('datePreset');
   const paramStartDate = searchParams.get('startDate')?.slice(0, 10) || '';
   const paramEndDate = searchParams.get('endDate')?.slice(0, 10) || '';
+  const paramLocationId = searchParams.get('locationId') || 'all';
 
   const getTodayStr = () => {
     const now = new Date();
@@ -42,13 +43,27 @@ function CustomersContent() {
   const [search, setSearch] = useState(paramSearch);
   const [startDate, setStartDate] = useState(initialStartDate);
   const [endDate, setEndDate] = useState(initialEndDate);
+  const [locationFilter, setLocationFilter] = useState(paramLocationId);
+  const [locationsList, setLocationsList] = useState<{ _id: string; name: string; code: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 20;
 
+  useEffect(() => {
+    fetch('/api/locations')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.locations)) {
+          setLocationsList(data.locations.filter((l: any) => l.active !== false));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // Sync whenever searchParams changes
   useEffect(() => {
     if (paramSearch) setSearch(paramSearch);
+    if (paramLocationId) setLocationFilter(paramLocationId);
     if (paramDatePreset === 'today') {
       const todayStr = getTodayStr();
       setStartDate(todayStr);
@@ -58,7 +73,7 @@ function CustomersContent() {
       setEndDate(paramEndDate);
     }
 
-    if (paramDatePreset || paramStartDate || paramEndDate || paramSearch) {
+    if (paramDatePreset || paramStartDate || paramEndDate || paramSearch || (paramLocationId && paramLocationId !== 'all')) {
       const timer = setTimeout(() => {
         customerTableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 200);
@@ -82,6 +97,7 @@ function CustomersContent() {
     if (startDate) params.set('startDate', startDate);
     if (endDate) params.set('endDate', endDate);
     if (search) params.set('search', search);
+    if (locationFilter) params.set('locationId', locationFilter);
     const qs = params.toString();
     if (qs) url += `?${qs}`;
 
@@ -89,7 +105,7 @@ function CustomersContent() {
       .then((res) => res.json())
       .then((data) => setCustomers(data.customers || []))
       .finally(() => setLoading(false));
-  }, [startDate, endDate, search]);
+  }, [startDate, endDate, search, locationFilter]);
 
   useEffect(() => {
     fetchCustomers();
@@ -132,6 +148,12 @@ function CustomersContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullname || !contact) return;
+
+    const digits = contact.replace(/\D/g, '');
+    if (digits.length !== 10) {
+      alert('Mobile number must be exactly 10 digits (numbers only).');
+      return;
+    }
 
     if (!editingId && existingCustMatch) {
       if (confirm(`A customer named "${existingCustMatch.fullname}" already has this phone number (${existingCustMatch.contact}). Would you like to view/edit that customer instead?`)) {
@@ -206,36 +228,65 @@ function CustomersContent() {
         <main className="p-3 sm:p-5 md:p-8 space-y-6 flex-1 max-w-7xl w-full mx-auto">
           {/* Header Action Bar */}
           <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            <div className="relative flex-1 max-w-md">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search by customer name, phone, address..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full pl-10 pr-4 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50"
-              />
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1 max-w-2xl">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search by customer name, phone, address..."
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full pl-10 pr-4 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50"
+                />
+              </div>
+
+              {locationsList.length > 0 && (
+                <div className="sm:w-56">
+                  <select
+                    value={locationFilter}
+                    onChange={(e) => {
+                      setLocationFilter(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  >
+                    <option value="all">📍 All Branches</option>
+                    {locationsList.map((l) => (
+                      <option key={l._id} value={l._id}>
+                        📍 {l.name} ({l.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             <button
               onClick={handleOpenAdd}
-              className="flex items-center justify-center space-x-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition shadow-xs"
+              className="flex items-center justify-center space-x-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition shadow-xs whitespace-nowrap"
             >
               <Plus className="w-4 h-4" />
               <span>+ Add Customer</span>
             </button>
           </div>
 
-          {/* Active Date Filter Banner if filtered by Dashboard */}
-          {(startDate || endDate) && (
-            <div className="px-4 py-2.5 rounded-2xl bg-cyan-50 border border-cyan-200 flex items-center justify-between text-xs text-cyan-900 animate-in fade-in">
+          {/* Active Filter Banner if filtered by Date or Branch */}
+          {(startDate || endDate || (locationFilter && locationFilter !== 'all')) && (
+            <div className="px-4 py-2.5 rounded-2xl bg-cyan-50 border border-cyan-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-cyan-900 animate-in fade-in">
               <div className="flex items-center space-x-2">
-                <Calendar className="w-3.5 h-3.5 text-cyan-600" />
+                <Calendar className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
                 <span>
-                  Showing customers registered for: <strong>{startDate === endDate ? startDate : `${startDate} to ${endDate}`}</strong> ({filtered.length} found)
+                  Showing customers
+                  {(startDate || endDate) && (
+                    <> registered on <strong>{startDate === endDate ? startDate : `${startDate} to ${endDate}`}</strong></>
+                  )}
+                  {locationFilter && locationFilter !== 'all' && (
+                    <> for branch <strong>{locationsList.find((l) => l._id === locationFilter)?.name || 'Selected Location'}</strong></>
+                  )}
+                  {' '}({filtered.length} found)
                 </span>
               </div>
               <button
@@ -243,10 +294,11 @@ function CustomersContent() {
                 onClick={() => {
                   setStartDate('');
                   setEndDate('');
+                  setLocationFilter('all');
                 }}
-                className="text-cyan-700 hover:text-cyan-950 font-bold underline flex items-center space-x-1"
+                className="text-cyan-700 hover:text-cyan-950 font-bold underline flex items-center space-x-1 self-start sm:self-auto"
               >
-                <span>Show All Customers</span>
+                <span>Reset All Filters</span>
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -360,19 +412,38 @@ function CustomersContent() {
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold text-slate-600 block mb-1">Contact Phone *</label>
+                <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                  Contact Phone (10 Digits) *
+                </label>
                 <input
-                  type="text"
+                  type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]{10}"
+                  maxLength={10}
                   required
                   placeholder="e.g. 9820011223"
                   value={contact}
-                  onChange={(e) => setContact(e.target.value)}
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setContact(digits);
+                  }}
                   className={`w-full px-3 py-2 text-xs rounded-xl border font-mono transition ${
                     !editingId && existingCustMatch
                       ? 'border-amber-400 bg-amber-50/30 ring-2 ring-amber-300/50'
                       : 'border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500'
                   }`}
                 />
+
+                {contact.length > 0 && contact.length < 10 && !existingCustMatch && (
+                  <p className="text-[10px] text-amber-600 font-medium mt-1">
+                    Mobile number must be exactly 10 digits ({contact.length}/10)
+                  </p>
+                )}
+                {contact.length === 10 && !existingCustMatch && (
+                  <p className="text-[10px] text-emerald-600 font-medium mt-1">
+                    ✓ Valid 10-digit mobile number
+                  </p>
+                )}
 
                 {/* Instant Existing Customer Detected Alert & One-Click Edit */}
                 {!editingId && existingCustMatch && (

@@ -32,6 +32,14 @@ interface CustomerOption {
   outstandingBalance?: number;
 }
 
+interface LocationOption {
+  _id: string;
+  name: string;
+  code: string;
+  orderPrefix?: string;
+  active?: boolean;
+}
+
 interface ItemServiceRate {
   serviceName: string;
   price: number;
@@ -73,6 +81,14 @@ interface OrderRowItem {
 
 export default function TransactionsPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{
+    level: number;
+    selectedLocationId?: string;
+    locationId?: string;
+    locationName?: string;
+  } | null>(null);
+  const [locations, setLocations] = useState<LocationOption[]>([]);
+  const [selectedBranchId, setSelectedBranchId] = useState<string>('');
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [clothingItems, setClothingItems] = useState<ClothingItemOption[]>([]);
   const [bulkPackages, setBulkPackages] = useState<PricePackage[]>([]);
@@ -185,12 +201,14 @@ export default function TransactionsPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [custRes, itemsRes, ordersRes, pricesRes, servicesRes] = await Promise.all([
+      const [custRes, itemsRes, ordersRes, pricesRes, servicesRes, meRes, locsRes] = await Promise.all([
         fetch('/api/customers').then((r) => r.json()),
         fetch('/api/items').then((r) => r.json()),
         fetch('/api/orders?limit=10').then((r) => r.json()),
         fetch('/api/prices').then((r) => r.json()),
         fetch('/api/services?active=true').then((r) => r.json()),
+        fetch('/api/auth/me').then((r) => r.json()),
+        fetch('/api/locations').then((r) => r.json()),
       ]);
 
       if (custRes.success) {
@@ -211,6 +229,30 @@ export default function TransactionsPage() {
 
       if (ordersRes.success) {
         setRecentOrders(ordersRes.orders || []);
+      }
+
+      if (locsRes.success && Array.isArray(locsRes.locations)) {
+        const activeLocs = locsRes.locations.filter((l: LocationOption) => l.active !== false);
+        setLocations(activeLocs);
+
+        if (meRes.authenticated && meRes.user) {
+          setCurrentUser(meRes.user);
+          if (meRes.user.level === 0) {
+            // Check if URL passed a locationId
+            const sp = new URLSearchParams(window.location.search);
+            const urlLocId = sp.get('locationId');
+            if (urlLocId && activeLocs.some((l: LocationOption) => l._id === urlLocId)) {
+              setSelectedBranchId(urlLocId);
+            } else if (meRes.user.selectedLocationId && meRes.user.selectedLocationId !== 'all') {
+              setSelectedBranchId(meRes.user.selectedLocationId);
+            } else if (activeLocs.length > 0) {
+              // Default to 1st branch when admin is on 'all'
+              setSelectedBranchId(activeLocs[0]._id);
+            }
+          } else {
+            setSelectedBranchId(meRes.user.locationId || '');
+          }
+        }
       }
     } catch {
       // ignore
@@ -392,6 +434,12 @@ export default function TransactionsPage() {
     e.preventDefault();
     if (!newCustName || !newCustContact) return;
 
+    const digits = newCustContact.replace(/\D/g, '');
+    if (digits.length !== 10) {
+      alert('Mobile number must be exactly 10 digits (numbers only).');
+      return;
+    }
+
     // If already detected as existing customer, select them immediately
     if (existingCustMatch) {
       handleUseExistingCustomer(existingCustMatch);
@@ -405,7 +453,7 @@ export default function TransactionsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fullname: newCustName,
-          contact: newCustContact,
+          contact: digits,
           address: newCustAddress,
         }),
       });
@@ -483,6 +531,7 @@ export default function TransactionsPage() {
     try {
       const payload = {
         customerId: selectedCustomerId,
+        locationId: selectedBranchId || undefined,
         orderItems: itemRows.map((r) => ({
           itemName: r.itemName,
           serviceName: r.serviceName,
@@ -558,6 +607,40 @@ export default function TransactionsPage() {
                 Add clothing items, choose service per item, and collect payment.
               </p>
             </div>
+
+            {/* If Admin: Branch Selector for Order Placement (Defaults to 1st branch, changeable) */}
+            {currentUser?.level === 0 && locations.length > 0 && (
+              <div className="flex items-center space-x-2 bg-blue-50/80 border border-blue-200 px-3.5 py-2 rounded-2xl self-start sm:self-auto shadow-2xs">
+                <Building2 className="w-4 h-4 text-blue-600 shrink-0" />
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-bold text-blue-900 uppercase tracking-wider">
+                    Place Order For Branch:
+                  </span>
+                  <select
+                    value={selectedBranchId}
+                    onChange={(e) => setSelectedBranchId(e.target.value)}
+                    className="bg-transparent text-xs font-bold text-blue-950 focus:outline-none cursor-pointer pr-2 font-mono"
+                  >
+                    {locations.map((loc) => (
+                      <option key={loc._id} value={loc._id} className="text-slate-800 bg-white font-semibold">
+                        📍 {loc.name} ({loc.orderPrefix || loc.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* If Staff: Assigned Branch Badge */}
+            {currentUser && currentUser.level > 0 && (
+              <div className="flex items-center space-x-2 bg-slate-100 border border-slate-200 px-3.5 py-2 rounded-2xl text-xs font-semibold text-slate-700 self-start sm:self-auto">
+                <Building2 className="w-4 h-4 text-blue-600 shrink-0" />
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Branch:</span>
+                  <span className="font-bold text-slate-900">{currentUser.locationName || 'Assigned Branch'}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Background data sync pulse indicator */}
@@ -1198,19 +1281,38 @@ export default function TransactionsPage() {
                 />
               </div>
               <div>
-                <label className="text-[11px] font-semibold text-slate-600 block mb-1">Mobile Contact *</label>
+                <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                  Mobile Contact (10 Digits) *
+                </label>
                 <input
-                  type="text"
+                  type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]{10}"
+                  maxLength={10}
                   required
                   placeholder="e.g. 9820011223"
                   value={newCustContact}
-                  onChange={(e) => setNewCustContact(e.target.value)}
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setNewCustContact(digits);
+                  }}
                   className={`w-full px-3 py-2 text-xs rounded-xl border font-mono transition ${
                     existingCustMatch
                       ? 'border-amber-400 bg-amber-50/30 ring-2 ring-amber-300/50'
                       : 'border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500'
                   }`}
                 />
+
+                {newCustContact.length > 0 && newCustContact.length < 10 && !existingCustMatch && (
+                  <p className="text-[10px] text-amber-600 font-medium mt-1">
+                    Mobile number must be exactly 10 digits ({newCustContact.length}/10)
+                  </p>
+                )}
+                {newCustContact.length === 10 && !existingCustMatch && (
+                  <p className="text-[10px] text-emerald-600 font-medium mt-1">
+                    ✓ Valid 10-digit mobile number
+                  </p>
+                )}
 
                 {/* Instant Existing Customer Detected Alert & One-Click Use Button */}
                 {existingCustMatch && (

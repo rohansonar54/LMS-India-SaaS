@@ -261,8 +261,8 @@ export default function QueuePage() {
           customerName: currentOrder.customerName,
           amountCollected: paidAmount,
           message: paidAmount > 0
-            ? `Successfully collected ₹${paidAmount.toLocaleString('en-IN')} via ${collectMethod} & handed over Order #${currentOrder.orderNumber}`
-            : `Successfully collected & handed over Order #${currentOrder.orderNumber} to ${currentOrder.customerName}`,
+            ? `Successfully collected ₹${paidAmount.toLocaleString('en-IN')} (${collectMethod}) for Order #${currentOrder.orderNumber}`
+            : `Successfully collected & handed over Order #${currentOrder.orderNumber}`,
         });
       } else {
         alert(data.message || 'Payment collection failed');
@@ -697,33 +697,23 @@ export default function QueuePage() {
 
       {/* Top Floating Notification Pop-up upon Successful Collection / Handover */}
       {collectionSuccess && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 w-full max-w-lg px-4 transition-all duration-300 animate-in fade-in slide-in-from-top-6">
-          <div className="bg-emerald-600 text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between border border-emerald-400/40 gap-3">
-            <div className="flex items-center space-x-3 min-w-0">
-              <span className="p-2 rounded-xl bg-white/20 text-white shrink-0 shadow-xs">
-                <CheckCircle2 className="w-5 h-5 text-white" />
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 w-auto max-w-[92vw] sm:max-w-xl px-2 transition-all duration-300 animate-in fade-in slide-in-from-top-4">
+          <div className="bg-emerald-50 text-emerald-900 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-2xl shadow-lg border border-emerald-300 flex items-center justify-between gap-2.5 sm:gap-3">
+            <div className="flex items-center space-x-2 sm:space-x-2.5 min-w-0">
+              <span className="p-1 rounded-lg bg-emerald-100 text-emerald-700 shrink-0">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
               </span>
-              <div className="min-w-0">
-                <div className="flex items-center space-x-1.5 flex-wrap">
-                  <h4 className="font-black text-sm text-white tracking-tight">
-                    Successfully Collected &amp; Delivered
-                  </h4>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-800/80 text-emerald-100 uppercase">
-                    #{collectionSuccess.orderNumber}
-                  </span>
-                </div>
-                <p className="text-xs text-emerald-100 font-medium truncate mt-0.5">
-                  {collectionSuccess.message || `Order successfully handed over to ${collectionSuccess.customerName}`}
-                </p>
-              </div>
+              <p className="text-xs sm:text-sm font-bold text-emerald-900 truncate">
+                {collectionSuccess.message || `Successfully collected & handed over Order #${collectionSuccess.orderNumber}`}
+              </p>
             </div>
             <button
               type="button"
               onClick={() => setCollectionSuccess(null)}
-              className="p-1.5 rounded-xl hover:bg-emerald-700 text-emerald-100 hover:text-white transition shrink-0"
+              className="p-1 rounded-lg hover:bg-emerald-200/60 text-emerald-600 hover:text-emerald-900 transition shrink-0 ml-1"
               title="Dismiss"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>

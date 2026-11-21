@@ -86,6 +86,24 @@ export default function DashboardPage() {
   const [recentOrders, setRecentOrders] = useState<ReceiptOrder[]>([]);
   const [selectedReceipt, setSelectedReceipt] = useState<ReceiptOrder | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeLocationId, setActiveLocationId] = useState<string | null>(null);
+  const [locations, setLocations] = useState<{ _id: string; name: string; code: string }[]>([]);
+  const [dashboardBranchId, setDashboardBranchId] = useState('');
+
+  useEffect(() => {
+    fetch('/api/locations')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.locations)) {
+          const activeLocs = data.locations.filter((l: any) => l.active !== false);
+          setLocations(activeLocs);
+          if (activeLocs.length > 0) {
+            setDashboardBranchId(activeLocs[0]._id);
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Hydrate from URL query params on initial mount
   useEffect(() => {
@@ -122,6 +140,7 @@ export default function DashboardPage() {
       const res = await fetch(`/api/dashboard?${params.toString()}`);
       const data = await res.json();
       if (data.success) {
+        setActiveLocationId(data.activeLocationId || null);
         setStats(data.stats);
         setStatusCounts(data.statusCounts || {});
         setPaymentMethodsDist(data.paymentMethodsDist || {});
@@ -157,6 +176,9 @@ export default function DashboardPage() {
       sp.set('datePreset', 'custom');
       if (customStartDate) sp.set('startDate', customStartDate);
       if (customEndDate) sp.set('endDate', customEndDate);
+    }
+    if (activeLocationId) {
+      sp.set('locationId', activeLocationId);
     }
     for (const [k, v] of Object.entries(extraParams)) {
       if (v) sp.set(k, v);
@@ -307,17 +329,40 @@ export default function DashboardPage() {
                 Create clothing orders, record advance/partial payments, print dual receipts with QR tracking, and manage delivery handovers.
               </p>
             </div>
-            <div className="flex items-center space-x-2 shrink-0">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0 w-full md:w-auto">
+              {/* Branch Selector for New Order (Defaults to 1st branch, changeable) */}
+              {locations.length > 0 && (
+                <div className="flex items-center space-x-2 bg-white/15 backdrop-blur-xs border border-white/20 px-3 py-2 rounded-2xl">
+                  <Building2 className="w-4 h-4 text-cyan-200 shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold text-cyan-200 uppercase tracking-wider">
+                      Branch for Order:
+                    </span>
+                    <select
+                      value={dashboardBranchId}
+                      onChange={(e) => setDashboardBranchId(e.target.value)}
+                      className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer pr-2 font-mono"
+                    >
+                      {locations.map((loc) => (
+                        <option key={loc._id} value={loc._id} className="text-slate-800 bg-white font-semibold">
+                          📍 {loc.name} ({loc.code})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
               <Link
-                href="/transactions"
-                className="px-5 py-2.5 rounded-2xl bg-white text-blue-700 font-bold text-xs sm:text-sm hover:bg-blue-50 shadow-md transition flex items-center space-x-1.5"
+                href={`/transactions${dashboardBranchId ? `?locationId=${dashboardBranchId}` : ''}`}
+                className="px-5 py-2.5 rounded-2xl bg-white text-blue-700 font-bold text-xs sm:text-sm hover:bg-blue-50 shadow-md transition flex items-center justify-center space-x-1.5"
               >
                 <PlusCircle className="w-4 h-4" />
                 <span>New POS Order</span>
               </Link>
               <Link
                 href={getDrilldownUrl('/payments', { tab: 'balances' })}
-                className="px-5 py-2.5 rounded-2xl bg-blue-900/60 text-white font-bold text-xs sm:text-sm hover:bg-blue-900 border border-white/20 transition flex items-center space-x-1.5"
+                className="px-5 py-2.5 rounded-2xl bg-blue-900/60 text-white font-bold text-xs sm:text-sm hover:bg-blue-900 border border-white/20 transition flex items-center justify-center space-x-1.5"
               >
                 <Wallet className="w-4 h-4" />
                 <span>Pending Balances</span>

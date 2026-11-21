@@ -186,20 +186,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, message: 'Customer not found' }, { status: 404 });
     }
 
-    // Determine target location: Staff is strictly locked to their assigned location
+    // Determine target location: Staff is locked to their assigned location, Admin can select or defaults to 1st branch
     let targetLocId = requestedLocId;
     if (user.level >= 1) {
       targetLocId = user.locationId;
     } else if (!targetLocId && user?.selectedLocationId && user.selectedLocationId !== 'all') {
       targetLocId = user.selectedLocationId;
-    } else if (!targetLocId && customer.locationId) {
-      targetLocId = customer.locationId;
     }
 
     let locationName = '';
+    let locDoc = null;
     if (targetLocId) {
-      const loc = await Location.findById(targetLocId).select('name').lean();
-      if (loc) locationName = loc.name;
+      locDoc = await Location.findById(targetLocId);
+      if (locDoc) locationName = locDoc.name;
+    }
+    if (!locDoc) {
+      locDoc = await Location.findOne({ active: true }).sort({ createdAt: 1 });
+      if (locDoc) {
+        targetLocId = locDoc._id;
+        locationName = locDoc.name;
+      }
     }
 
     // Calculate subtotal
@@ -237,9 +243,56 @@ export async function POST(req: Request) {
     // Dynamic service-based workflow
     const activeWorkflowSteps = getWorkflowStagesForServices(servicesList);
 
-    // Generate Order Number
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const orderNumber = `LMS-${randomSuffix}`;
+    // Generate Sequential Order Number from Location's Order Start Code (Prefix)
+    const orderPrefix = (locDoc?.orderPrefix || locDoc?.code || 'LMS').toUpperCase().trim();
+
+    let nextSeq = 1;
+    if (locDoc) {
+      // If orderCounter is not initialized, check highest existing sequence for this prefix
+      if (!locDoc.orderCounter || locDoc.orderCounter === 0) {
+        const prefixRegex = new RegExp(`^${orderPrefix}-(\\d+)$`, 'i');
+        const existingOrders = await Order.find({ orderNumber: prefixRegex }).select('orderNumber').lean();
+        let maxExisting = 0;
+        for (const eo of existingOrders) {
+          const match = eo.orderNumber?.match(prefixRegex);
+          if (match && match[1]) {
+            const num = parseInt(match[1], 10);
+            if (num > maxExisting) maxExisting = num;
+          }
+        }
+        if (maxExisting > 0) {
+          await Location.findByIdAndUpdate(locDoc._id, { $set: { orderCounter: maxExisting } });
+        }
+      }
+
+      // Atomically increment the sequence counter
+      const updatedLoc = await Location.findByIdAndUpdate(
+        locDoc._id,
+        { $inc: { orderCounter: 1 } },
+        { new: true }
+      );
+      nextSeq = updatedLoc?.orderCounter || 1;
+    } else {
+      const count = await Order.countDocuments();
+      nextSeq = count + 1;
+    }
+
+    let orderNumber = `${orderPrefix}-${String(nextSeq).padStart(4, '0')}`;
+
+    // Safeguard loop to guarantee uniqueness
+    while (await Order.findOne({ orderNumber })) {
+      if (locDoc) {
+        const bumped = await Location.findByIdAndUpdate(
+          locDoc._id,
+          { $inc: { orderCounter: 1 } },
+          { new: true }
+        );
+        nextSeq = bumped?.orderCounter || nextSeq + 1;
+      } else {
+        nextSeq += 1;
+      }
+      orderNumber = `${orderPrefix}-${String(nextSeq).padStart(4, '0')}`;
+    }
 
     // Deduct supplies if provided
     if (supplies && supplies.length > 0) {

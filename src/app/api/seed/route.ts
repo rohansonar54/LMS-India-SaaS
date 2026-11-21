@@ -26,6 +26,7 @@ export async function POST() {
       loc1 = await Location.create({
         name: 'Mumbai Central Branch',
         code: 'MUM-01',
+        orderPrefix: 'MUM',
         address: 'Shop 4, Dr. D.B. Marg, Mumbai Central, Mumbai, MH',
         phone: '+91 98200 11223',
         active: true,
@@ -37,6 +38,7 @@ export async function POST() {
       loc2 = await Location.create({
         name: 'Andheri West Hub',
         code: 'MUM-02',
+        orderPrefix: 'AND',
         address: '12 Link Road, Near Metro Station, Andheri West, Mumbai, MH',
         phone: '+91 98200 44556',
         active: true,
@@ -48,6 +50,7 @@ export async function POST() {
       loc3 = await Location.create({
         name: 'Bangalore Indiranagar',
         code: 'BLR-01',
+        orderPrefix: 'BLR',
         address: '100ft Road, HAL 2nd Stage, Indiranagar, Bengaluru, KA',
         phone: '+91 98450 77889',
         active: true,

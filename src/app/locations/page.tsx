@@ -25,6 +25,8 @@ interface LocationItem {
   _id: string;
   name: string;
   code: string;
+  orderPrefix?: string;
+  orderCounter?: number;
   address: string;
   city: string;
   state: string;
@@ -60,6 +62,7 @@ export default function LocationsPage() {
   const [editingLoc, setEditingLoc] = useState<LocationItem | null>(null);
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
+  const [orderPrefix, setOrderPrefix] = useState('');
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('Nashik');
   const [state, setState] = useState('Maharashtra');
@@ -105,6 +108,7 @@ export default function LocationsPage() {
     setEditingLoc(null);
     setName('');
     setCode('');
+    setOrderPrefix('');
     setAddress('');
     setCity('Nashik');
     setState('Maharashtra');
@@ -122,6 +126,7 @@ export default function LocationsPage() {
     setEditingLoc(loc);
     setName(loc.name);
     setCode(loc.code);
+    setOrderPrefix(loc.orderPrefix || loc.code || '');
     setAddress(loc.address || '');
     setCity(loc.city || 'Nashik');
     setState(loc.state || 'Maharashtra');
@@ -176,6 +181,7 @@ export default function LocationsPage() {
       const payload: Record<string, unknown> = {
         name: name.trim(),
         code: code.toUpperCase().trim(),
+        orderPrefix: orderPrefix.toUpperCase().trim(),
         address: address.trim(),
         city: city.trim(),
         state: state.trim(),
@@ -359,10 +365,13 @@ export default function LocationsPage() {
                     {/* Header: Name, Code & Status Badge */}
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 flex-wrap gap-y-1">
                           <h4 className="font-bold text-slate-900 text-sm truncate">{loc.name}</h4>
-                          <span className="font-mono px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 font-black text-[10px] border border-blue-200">
+                          <span className="font-mono px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 font-black text-[10px] border border-blue-200" title="Location Code">
                             {loc.code}
+                          </span>
+                          <span className="font-mono px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-bold text-[10px] border border-indigo-200" title="Order Number Sequence">
+                            #{(loc.orderPrefix || loc.code)}-0001...
                           </span>
                         </div>
                         <p className="text-[11px] text-slate-500 mt-0.5">
@@ -520,6 +529,43 @@ export default function LocationsPage() {
                     onChange={(e) => setCode(e.target.value.toUpperCase())}
                     className="w-full px-3 py-2 text-xs font-mono font-bold uppercase rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
+                </div>
+              </div>
+
+              {/* Order Start From Code (Prefix) */}
+              <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-2xl space-y-1.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex-1">
+                    <label className="text-[11px] font-bold text-blue-900 block mb-0.5">
+                      Order Start From Code (e.g. SHY)
+                    </label>
+                    <p className="text-[10px] text-blue-700 leading-relaxed">
+                      All new orders for this branch will start from this code in sequential order.
+                    </p>
+                  </div>
+                  <div className="w-full sm:w-44">
+                    <input
+                      type="text"
+                      placeholder="e.g. SHY"
+                      value={orderPrefix}
+                      onChange={(e) => setOrderPrefix(e.target.value.toUpperCase().replace(/\s+/g, ''))}
+                      className="w-full px-3 py-1.5 text-xs font-mono font-black uppercase rounded-xl border border-blue-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800"
+                    />
+                  </div>
+                </div>
+                <div className="text-[11px] font-medium text-slate-600 flex items-center space-x-1.5 pt-0.5 flex-wrap gap-y-1">
+                  <span>Sequence format:</span>
+                  <span className="font-mono font-bold text-blue-700 bg-white px-2 py-0.5 rounded border border-blue-200">
+                    {(orderPrefix || code || 'LMS')}-0001
+                  </span>
+                  <span>→</span>
+                  <span className="font-mono font-bold text-blue-700 bg-white px-2 py-0.5 rounded border border-blue-200">
+                    {(orderPrefix || code || 'LMS')}-0002
+                  </span>
+                  <span>→</span>
+                  <span className="font-mono font-bold text-blue-700 bg-white px-2 py-0.5 rounded border border-blue-200">
+                    {(orderPrefix || code || 'LMS')}-0003
+                  </span>
                 </div>
               </div>
 

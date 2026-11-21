@@ -171,6 +171,7 @@ export async function GET(req: Request) {
         startDate: periodStart ? periodStart.toISOString() : null,
         endDate: periodEnd ? periodEnd.toISOString() : null,
       },
+      activeLocationId: (locationFilter.locationId as string) || null,
       stats: {
         totalRevenue,
         todayRevenue,

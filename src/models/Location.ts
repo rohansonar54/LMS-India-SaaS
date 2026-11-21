@@ -3,6 +3,8 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 export interface ILocation extends Document {
   name: string;
   code: string;
+  orderPrefix?: string;
+  orderCounter?: number;
   address: string;
   city: string;
   state: string;
@@ -17,6 +19,8 @@ export interface ILocation extends Document {
 const LocationSchema = new Schema<ILocation>({
   name: { type: String, required: true, trim: true },
   code: { type: String, required: true, unique: true, uppercase: true, trim: true },
+  orderPrefix: { type: String, uppercase: true, trim: true, default: '' },
+  orderCounter: { type: Number, default: 0 },
   address: { type: String, default: '' },
   city: { type: String, default: 'Nashik' },
   state: { type: String, default: 'Maharashtra' },
@@ -27,6 +31,10 @@ const LocationSchema = new Schema<ILocation>({
   active: { type: Boolean, default: true, index: true },
   createdAt: { type: Date, default: Date.now },
 });
+
+if (process.env.NODE_ENV !== 'production' && mongoose.models.Location) {
+  delete (mongoose.models as Record<string, unknown>).Location;
+}
 
 export const Location: Model<ILocation> =
   mongoose.models.Location || mongoose.model<ILocation>('Location', LocationSchema);

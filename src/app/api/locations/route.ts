@@ -61,7 +61,7 @@ export async function POST(req: Request) {
     await connectDB();
 
     const body = await req.json();
-    const { name, code, address, city, state, country, pincode, phone, email, active } = body;
+    const { name, code, orderPrefix, address, city, state, country, pincode, phone, email, active } = body;
 
     if (!name || !code) {
       return NextResponse.json(
@@ -79,9 +79,13 @@ export async function POST(req: Request) {
       );
     }
 
+    const formattedOrderPrefix = (orderPrefix ? orderPrefix.toUpperCase().trim() : formattedCode);
+
     const newLocation = await Location.create({
       name: name.trim(),
       code: formattedCode,
+      orderPrefix: formattedOrderPrefix,
+      orderCounter: 0,
       address: address?.trim() || '',
       city: city?.trim() || 'Nashik',
       state: state?.trim() || 'Maharashtra',
@@ -107,7 +111,7 @@ export async function PUT(req: Request) {
     await connectDB();
 
     const body = await req.json();
-    const { id, name, code, address, city, state, country, pincode, phone, email, active, assignedStaffIds } = body;
+    const { id, name, code, orderPrefix, orderCounter, address, city, state, country, pincode, phone, email, active, assignedStaffIds } = body;
 
     if (!id) {
       return NextResponse.json({ success: false, message: 'Location ID is required.' }, { status: 400 });
@@ -129,6 +133,13 @@ export async function PUT(req: Request) {
         );
       }
       location.code = formattedCode;
+    }
+
+    if (orderPrefix !== undefined) {
+      location.orderPrefix = orderPrefix ? orderPrefix.toUpperCase().trim() : (location.code || '');
+    }
+    if (orderCounter !== undefined && !isNaN(Number(orderCounter))) {
+      location.orderCounter = Math.max(0, Number(orderCounter));
     }
 
     if (name) location.name = name.trim();

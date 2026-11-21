@@ -63,6 +63,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, message: 'Name and contact are required' }, { status: 400 });
     }
 
+    const cleanContact = (contact || '').replace(/\D/g, '');
+    if (!/^\d{10}$/.test(cleanContact)) {
+      return NextResponse.json(
+        { success: false, message: 'Mobile number must be exactly 10 digits (numbers only).' },
+        { status: 400 }
+      );
+    }
+
     let targetLocId = reqLocId;
     if (user.level > 0 && user.locationId) {
       targetLocId = user.locationId;
@@ -76,15 +84,11 @@ export async function POST(req: Request) {
       if (loc) locationName = loc.name;
     }
 
-    // Check if customer with this mobile number already exists
-    const cleanContact = contact.replace(/\D/g, '');
-    const last10 = cleanContact.length >= 10 ? cleanContact.slice(-10) : cleanContact;
+    // Check if customer with this mobile number already exists (globally unique across all branches)
+    const last10 = cleanContact.slice(-10);
     const contactFilter: Record<string, unknown> = {
       contact: { $regex: last10 + '$', $options: 'i' },
     };
-    if (targetLocId) {
-      contactFilter.locationId = targetLocId;
-    }
 
     const existingCustomer = await Customer.findOne(contactFilter);
     if (existingCustomer) {
@@ -92,7 +96,7 @@ export async function POST(req: Request) {
         {
           success: false,
           code: 'CUSTOMER_EXISTS',
-          message: `Customer with mobile number ${existingCustomer.contact} already exists: ${existingCustomer.fullname}`,
+          message: `Customer with mobile number ${existingCustomer.contact} already exists: ${existingCustomer.fullname} (${existingCustomer.locationName || 'Registered Branch'})`,
           customer: existingCustomer,
         },
         { status: 409 }
@@ -137,32 +141,26 @@ export async function PUT(req: Request) {
       return NextResponse.json({ success: false, message: 'Customer not found' }, { status: 404 });
     }
 
-    // Location isolation for staff
-    if (user.level > 0 && existing.locationId && existing.locationId.toString() !== user.locationId) {
-      return NextResponse.json(
-        { success: false, message: 'Access denied: cannot modify customer from another location' },
-        { status: 403 }
-      );
-    }
-
     const updateData: Record<string, unknown> = {
       fullname: fullname?.trim() || existing.fullname,
       address: address?.trim() !== undefined ? address.trim() : existing.address,
       contact: contact?.trim() || existing.contact,
     };
 
-    // If contact changed, verify no other customer has this mobile number
+    // If contact changed, verify no other customer has this mobile number (globally across all branches)
     if (contact && contact.trim() !== existing.contact) {
       const cleanContact = contact.replace(/\D/g, '');
-      const last10 = cleanContact.length >= 10 ? cleanContact.slice(-10) : cleanContact;
-      const targetLoc = reqLocId || existing.locationId;
+      if (!/^\d{10}$/.test(cleanContact)) {
+        return NextResponse.json(
+          { success: false, message: 'Mobile number must be exactly 10 digits (numbers only).' },
+          { status: 400 }
+        );
+      }
+      const last10 = cleanContact.slice(-10);
       const duplicateFilter: Record<string, unknown> = {
         _id: { $ne: id },
         contact: { $regex: last10 + '$', $options: 'i' },
       };
-      if (targetLoc) {
-        duplicateFilter.locationId = targetLoc;
-      }
       const duplicate = await Customer.findOne(duplicateFilter);
       if (duplicate) {
         return NextResponse.json(
