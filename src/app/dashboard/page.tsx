@@ -91,19 +91,38 @@ export default function DashboardPage() {
   const [dashboardBranchId, setDashboardBranchId] = useState('');
 
   useEffect(() => {
-    fetch('/api/locations')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && Array.isArray(data.locations)) {
-          const activeLocs = data.locations.filter((l: any) => l.active !== false);
+    Promise.all([
+      fetch('/api/locations').then((res) => res.json()),
+      fetch('/api/auth/me').then((res) => res.json()),
+    ])
+      .then(([locData, meData]) => {
+        if (locData.success && Array.isArray(locData.locations)) {
+          const activeLocs = locData.locations.filter((l: any) => l.active !== false);
           setLocations(activeLocs);
-          if (activeLocs.length > 0) {
-            setDashboardBranchId(activeLocs[0]._id);
+
+          const userLoc =
+            meData?.authenticated && meData?.user
+              ? meData.user.level === 0
+                ? meData.user.selectedLocationId
+                : meData.user.locationId
+              : null;
+
+          if (userLoc && userLoc !== 'all' && activeLocs.some((l: any) => l._id === userLoc)) {
+            setDashboardBranchId(userLoc);
+          } else if (activeLocs.length > 0) {
+            setDashboardBranchId((prev) => (prev && activeLocs.some((l: any) => l._id === prev) ? prev : activeLocs[0]._id));
           }
         }
       })
       .catch(() => {});
   }, []);
+
+  // Keep dashboardBranchId synchronized whenever activeLocationId changes
+  useEffect(() => {
+    if (activeLocationId && locations.some((l) => l._id === activeLocationId)) {
+      setDashboardBranchId(activeLocationId);
+    }
+  }, [activeLocationId, locations]);
 
   // Hydrate from URL query params on initial mount
   useEffect(() => {
@@ -140,7 +159,11 @@ export default function DashboardPage() {
       const res = await fetch(`/api/dashboard?${params.toString()}`);
       const data = await res.json();
       if (data.success) {
-        setActiveLocationId(data.activeLocationId || null);
+        const locId = data.activeLocationId || null;
+        setActiveLocationId(locId);
+        if (locId) {
+          setDashboardBranchId(locId);
+        }
         setStats(data.stats);
         setStatusCounts(data.statusCounts || {});
         setPaymentMethodsDist(data.paymentMethodsDist || {});
