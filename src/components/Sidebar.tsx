@@ -20,6 +20,7 @@ import {
   X,
   ChevronDown,
   ShoppingBag,
+  Megaphone,
 } from 'lucide-react';
 import { useSidebar } from '@/context/SidebarContext';
 
@@ -115,6 +116,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   ];
 
   const adminItems = [
+    { label: 'Advertise / Marketing', href: '/marketing', icon: Megaphone },
     { label: 'Sales & Reports', href: '/sales', icon: BarChart3 },
     { label: 'Location Management', href: '/locations', icon: Building2 },
     { label: 'Staff Management', href: '/staff', icon: ShieldAlert },
