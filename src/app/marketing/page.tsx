@@ -23,6 +23,9 @@ import {
   ExternalLink,
   Wifi,
   WifiOff,
+  Building2,
+  Smartphone,
+  Search,
 } from 'lucide-react';
 
 interface CampaignSummary {
@@ -61,10 +64,15 @@ interface CampaignDetail extends CampaignSummary {
 
 interface WhatsAppStatus {
   gatewayUrl: string;
+  apiKey?: string;
+  sessionId?: string;
+  online?: boolean;
   connected: boolean;
   phone?: string | null;
   pushName?: string | null;
   qr?: string | null;
+  sessions?: { id: string; name: string; sessionId: string; status: string; phone?: string }[];
+  message?: string;
   offline?: boolean;
 }
 
@@ -86,18 +94,54 @@ export default function MarketingPage() {
   const [showQrModal, setShowQrModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<CampaignDetail | null>(null);
-  const [gatewayInputUrl, setGatewayInputUrl] = useState('');
+  const [gatewayInputUrl, setGatewayInputUrl] = useState('https://whatsapp-gateway-vqk0.onrender.com');
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [sessionIdInput, setSessionIdInput] = useState('');
 
   // New Campaign Form
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [audienceType, setAudienceType] = useState<'branch' | 'custom_numbers' | 'selected_customers'>('branch');
+  const [customNumbers, setCustomNumbers] = useState('');
+  const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
+  const [availableCustomers, setAvailableCustomers] = useState<{ _id: string; fullname: string; contact: string; locationName?: string }[]>([]);
+  const [customerSearch, setCustomerSearch] = useState('');
   const [targetLocationId, setTargetLocationId] = useState('all');
   const [batchSize, setBatchSize] = useState(100);
   const [delaySeconds, setDelaySeconds] = useState(10);
   const [cooldownMinutes, setCooldownMinutes] = useState(60);
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState('');
+
+  const fetchAllCustomers = useCallback(async () => {
+    try {
+      const res = await fetch('/api/customers');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.customers)) {
+        setAvailableCustomers(data.customers);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const toggleCustomer = (id: string) => {
+    setSelectedCustomerIds((prev) =>
+      prev.includes(id) ? prev.filter((cId) => cId !== id) : [...prev, id]
+    );
+  };
+
+  const parsedCustomCount = customNumbers
+    .split(/[,\n;]+/)
+    .map((n) => n.replace(/\D/g, '').slice(-10))
+    .filter((n) => n.length === 10).length;
+
+  const filteredAvailableCustomers = availableCustomers.filter((c) => {
+    if (!customerSearch.trim()) return true;
+    const q = customerSearch.toLowerCase();
+    return c.fullname.toLowerCase().includes(q) || c.contact.includes(q);
+  });
 
   // Processing state
   const isProcessingRef = useRef(false);
@@ -123,14 +167,14 @@ export default function MarketingPage() {
       const data = await res.json();
       if (data.success) {
         setWaStatus(data);
-        if (data.gatewayUrl && !gatewayInputUrl) {
-          setGatewayInputUrl(data.gatewayUrl);
-        }
+        if (data.gatewayUrl) setGatewayInputUrl(data.gatewayUrl);
+        if (data.apiKey && !apiKeyInput) setApiKeyInput(data.apiKey);
+        if (data.sessionId && !sessionIdInput) setSessionIdInput(data.sessionId);
       }
     } catch {
       // ignore
     }
-  }, [gatewayInputUrl]);
+  }, [apiKeyInput, sessionIdInput]);
 
   useEffect(() => {
     fetchCampaigns();
@@ -239,6 +283,9 @@ export default function MarketingPage() {
           title,
           message,
           imageUrl,
+          audienceType,
+          customNumbers,
+          selectedCustomerIds,
           targetLocationId,
           batchSize,
           delaySeconds,
@@ -255,6 +302,9 @@ export default function MarketingPage() {
         setTitle('');
         setMessage('');
         setImageUrl('');
+        setAudienceType('branch');
+        setCustomNumbers('');
+        setSelectedCustomerIds([]);
         setTargetLocationId('all');
         fetchCampaigns();
       }
@@ -310,14 +360,18 @@ export default function MarketingPage() {
     }
   };
 
-  // Save Gateway URL
+  // Save Gateway Settings
   const handleSaveGateway = async () => {
     if (!gatewayInputUrl.trim()) return;
     try {
       const res = await fetch('/api/campaigns/whatsapp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: gatewayInputUrl }),
+        body: JSON.stringify({
+          url: gatewayInputUrl,
+          apiKey: apiKeyInput,
+          sessionId: sessionIdInput,
+        }),
       });
       const data = await res.json();
       if (data.success) {
@@ -376,17 +430,24 @@ export default function MarketingPage() {
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                       <span>Connected</span>
                     </span>
+                  ) : waStatus?.online ? (
+                    <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[11px] font-bold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                      <span>Gateway Online (Need Setup)</span>
+                    </span>
                   ) : (
                     <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[11px] font-bold">
                       <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                      <span>{waStatus?.offline ? 'Microservice Offline' : 'Disconnected'}</span>
+                      <span>Offline / Sleeping</span>
                     </span>
                   )}
                 </div>
                 <p className="text-xs text-slate-500 mt-0.5">
                   {waStatus?.connected
                     ? `Logged in as: +${waStatus.phone || ''} (${waStatus.pushName || 'Bot'})`
-                    : 'WhatsApp is not linked. Scan the QR code to enable 1-click broadcasts.'}
+                    : waStatus?.online
+                    ? (waStatus.message || 'Render Gateway is live! Add your API Key in Settings to link your sessions.')
+                    : 'WhatsApp Gateway is currently offline or sleeping. Open the dashboard to wake it up.'}
                 </p>
               </div>
             </div>
@@ -726,26 +787,84 @@ export default function MarketingPage() {
                 </div>
               )}
 
-              {/* Title & Branch Target */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Campaign Title *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Monsoon 25% Off Dry Cleaning"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50"
-                  />
-                </div>
+              {/* Campaign Title */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Campaign Title *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Test Flyer Run / Monsoon 25% Off"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50"
+                />
+              </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Target Customers *</label>
+              {/* Target Audience Mode Selection */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">Who should receive this? *</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAudienceType('branch')}
+                    className={`p-2.5 rounded-2xl border text-left transition flex items-center space-x-2.5 cursor-pointer ${
+                      audienceType === 'branch'
+                        ? 'border-blue-600 bg-blue-50 text-blue-900 ring-2 ring-blue-500/20'
+                        : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Building2 className="w-4 h-4 text-blue-600 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold truncate">By Branch / All</p>
+                      <p className="text-[10px] text-slate-500 truncate">Entire customer base</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setAudienceType('custom_numbers')}
+                    className={`p-2.5 rounded-2xl border text-left transition flex items-center space-x-2.5 cursor-pointer ${
+                      audienceType === 'custom_numbers'
+                        ? 'border-amber-600 bg-amber-50 text-amber-900 ring-2 ring-amber-500/20'
+                        : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Smartphone className="w-4 h-4 text-amber-600 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold truncate">🧪 Test Mode</p>
+                      <p className="text-[10px] text-slate-500 truncate">2-3 Custom Numbers</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAudienceType('selected_customers');
+                      if (availableCustomers.length === 0) fetchAllCustomers();
+                    }}
+                    className={`p-2.5 rounded-2xl border text-left transition flex items-center space-x-2.5 cursor-pointer ${
+                      audienceType === 'selected_customers'
+                        ? 'border-emerald-600 bg-emerald-50 text-emerald-900 ring-2 ring-emerald-500/20'
+                        : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Users className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold truncate">👥 Pick Customers</p>
+                      <p className="text-[10px] text-slate-500 truncate">Select individually</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Mode 1: By Branch */}
+              {audienceType === 'branch' && (
+                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Select Target Branch *</label>
                   <select
                     value={targetLocationId}
                     onChange={(e) => setTargetLocationId(e.target.value)}
-                    className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                    className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                   >
                     <option value="all">🌐 All Branches (Consolidated)</option>
                     {locations.map((loc) => (
@@ -755,7 +874,111 @@ export default function MarketingPage() {
                     ))}
                   </select>
                 </div>
-              </div>
+              )}
+
+              {/* Mode 2: Test Mode (Custom Numbers) */}
+              {audienceType === 'custom_numbers' && (
+                <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-2 animate-in fade-in">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-amber-900 flex items-center space-x-1.5">
+                      <Smartphone className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Enter Test Mobile Numbers:</span>
+                    </label>
+                    <span className="text-[11px] font-mono font-bold text-amber-800 bg-amber-200/60 px-2 py-0.5 rounded-full">
+                      {parsedCustomCount} number{parsedCustomCount !== 1 ? 's' : ''} detected
+                    </span>
+                  </div>
+                  <textarea
+                    rows={2}
+                    placeholder="Enter 10-digit numbers separated by comma, space or newline (e.g. 9762861286, 9876543210)"
+                    value={customNumbers}
+                    onChange={(e) => setCustomNumbers(e.target.value)}
+                    className="w-full p-2.5 text-xs font-mono rounded-xl border border-amber-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                  <p className="text-[10px] text-amber-800">
+                    💡 <strong>Test Safe:</strong> Perfect for testing flyer delivery on 2-3 personal/staff phone numbers first before broadcasting to real customers.
+                  </p>
+                </div>
+              )}
+
+              {/* Mode 3: Specific Selected Customers */}
+              {audienceType === 'selected_customers' && (
+                <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-2.5 animate-in fade-in">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-emerald-900 flex items-center space-x-1.5">
+                      <Users className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Select Customers from Directory:</span>
+                    </span>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs font-bold text-emerald-800 bg-emerald-200/60 px-2.5 py-0.5 rounded-full">
+                        {selectedCustomerIds.length} Selected
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (selectedCustomerIds.length === availableCustomers.length) {
+                            setSelectedCustomerIds([]);
+                          } else {
+                            setSelectedCustomerIds(availableCustomers.map((c) => c._id));
+                          }
+                        }}
+                        className="text-[11px] text-emerald-800 underline font-bold cursor-pointer"
+                      >
+                        {selectedCustomerIds.length === availableCustomers.length ? 'Deselect All' : 'Select All'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="text"
+                      placeholder="Search customers by name or contact number..."
+                      value={customerSearch}
+                      onChange={(e) => setCustomerSearch(e.target.value)}
+                      className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-emerald-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+
+                  <div className="max-h-44 overflow-y-auto divide-y divide-emerald-100 border border-emerald-200 rounded-xl bg-white">
+                    {filteredAvailableCustomers.length === 0 ? (
+                      <p className="p-3 text-center text-xs text-slate-400">
+                        {availableCustomers.length === 0 ? 'Loading customers...' : 'No customers match your search.'}
+                      </p>
+                    ) : (
+                      filteredAvailableCustomers.map((cust) => {
+                        const checked = selectedCustomerIds.includes(cust._id);
+                        return (
+                          <label
+                            key={cust._id}
+                            className={`flex items-center justify-between px-3 py-2 text-xs hover:bg-emerald-50/50 cursor-pointer transition ${
+                              checked ? 'bg-emerald-50/40' : ''
+                            }`}
+                          >
+                            <div className="flex items-center space-x-2.5">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleCustomer(cust._id)}
+                                className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                              />
+                              <div>
+                                <p className="font-bold text-slate-800">{cust.fullname}</p>
+                                <p className="text-[10px] text-slate-400 font-mono">{cust.contact}</p>
+                              </div>
+                            </div>
+                            {cust.locationName && (
+                              <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold">
+                                {cust.locationName}
+                              </span>
+                            )}
+                          </label>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Flyer Image Upload */}
               <div>
@@ -951,24 +1174,65 @@ export default function MarketingPage() {
             </div>
 
             <p className="text-xs text-slate-500">
-              Specify the URL of your WhatsApp bridge microservice (e.g. running locally on your shop computer or hosted free on Render).
+              Configure your cloud-deployed WhatsApp Gateway on Render to handle automated broadcasts and flyer delivery.
             </p>
 
+            {/* Gateway URL */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Microservice Gateway URL</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-slate-700">Gateway URL</label>
+                {gatewayInputUrl && (
+                  <a
+                    href={gatewayInputUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] text-blue-600 hover:text-blue-800 font-bold flex items-center space-x-1"
+                  >
+                    <span>Open Dashboard</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+              </div>
               <input
                 type="text"
-                placeholder="http://localhost:3001 or https://my-wa.onrender.com"
+                placeholder="https://whatsapp-gateway-vqk0.onrender.com"
                 value={gatewayInputUrl}
                 onChange={(e) => setGatewayInputUrl(e.target.value)}
                 className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-mono bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
-            <div className="p-3 bg-blue-50 rounded-xl text-blue-900 text-xs space-y-1">
-              <p className="font-bold">Tips:</p>
-              <p>• <strong>Shop PC (Free):</strong> Run <code className="font-mono bg-blue-100 px-1 rounded">npm start</code> in folder <code className="font-mono bg-blue-100 px-1 rounded">whatsapp-service/</code> on <code className="font-mono">http://localhost:3001</code>.</p>
-              <p>• <strong>Render (Free Cloud):</strong> Deploy the <code className="font-mono">whatsapp-service</code> folder and paste your public URL here.</p>
+            {/* API Key */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Gateway API Key (X-API-Key)</label>
+              <input
+                type="password"
+                placeholder="Paste your API Key (e.g. ak_...)"
+                value={apiKeyInput}
+                onChange={(e) => setApiKeyInput(e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-mono bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-[10px] text-slate-400 mt-1">
+                Copy this from your Render Gateway dashboard under <strong>Settings ➔ API Keys</strong>.
+              </p>
+            </div>
+
+            {/* Session ID / Name */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Session Name / ID (Optional)</label>
+              <input
+                type="text"
+                placeholder="e.g. lms-bot (leave blank to auto-use first connected session)"
+                value={sessionIdInput}
+                onChange={(e) => setSessionIdInput(e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-mono bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="p-3 bg-emerald-50 rounded-xl text-emerald-900 text-xs space-y-1">
+              <p className="font-bold">Live Cloud Gateway:</p>
+              <p>• Your gateway is live at <code className="font-mono bg-emerald-100 px-1 rounded">https://whatsapp-gateway-vqk0.onrender.com</code>.</p>
+              <p>• Log in to the gateway dashboard, create or scan your session, copy the API key, and paste it here.</p>
             </div>
 
             <div className="flex justify-end space-x-2 pt-2">
@@ -984,7 +1248,7 @@ export default function MarketingPage() {
                 onClick={handleSaveGateway}
                 className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition cursor-pointer"
               >
-                Save URL
+                Save Settings
               </button>
             </div>
           </div>

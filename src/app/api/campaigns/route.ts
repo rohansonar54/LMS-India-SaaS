@@ -31,6 +31,9 @@ export async function POST(req: Request) {
       title,
       message,
       imageUrl,
+      audienceType = 'branch',
+      customNumbers = '',
+      selectedCustomerIds = [],
       targetLocationId = 'all',
       batchSize = 100,
       delaySeconds = 10,
@@ -46,49 +49,115 @@ export async function POST(req: Request) {
 
     await connectDB();
 
-    // Determine target location name
     let targetLocationName = 'All Branches (Consolidated)';
-    const customerFilter: Record<string, unknown> = {};
+    let recipients: {
+      customerId?: any;
+      customerName: string;
+      contact: string;
+      status: 'pending';
+    }[] = [];
 
-    if (targetLocationId && targetLocationId !== 'all') {
-      customerFilter.locationId = targetLocationId;
-      const loc = await Location.findById(targetLocationId);
-      if (loc) {
-        targetLocationName = `${loc.name} (${loc.code})`;
+    // Mode 1: Custom Test Mobile Numbers (e.g. 2-3 personal/staff numbers)
+    if (audienceType === 'custom_numbers') {
+      const rawNumbers = typeof customNumbers === 'string' ? customNumbers : (customNumbers || []).join(',');
+      const parsedNums = rawNumbers
+        .split(/[,\n;]+/)
+        .map((n: string) => n.replace(/\D/g, '').slice(-10))
+        .filter((n: string) => n.length === 10);
+
+      const uniqueNums = Array.from(new Set(parsedNums)) as string[];
+
+      if (uniqueNums.length === 0) {
+        return NextResponse.json(
+          { success: false, message: 'Please enter at least one valid 10-digit mobile number for test mode.' },
+          { status: 400 }
+        );
       }
+
+      recipients = uniqueNums.map((num, idx) => ({
+        customerId: null,
+        customerName: `Test Recipient ${idx + 1}`,
+        contact: num,
+        status: 'pending' as const,
+      }));
+
+      targetLocationName = `🧪 Test Mode (${recipients.length} Custom Number${recipients.length > 1 ? 's' : ''})`;
     }
+    // Mode 2: Specific Selected Customers (picked from customer list)
+    else if (audienceType === 'selected_customers') {
+      if (!Array.isArray(selectedCustomerIds) || selectedCustomerIds.length === 0) {
+        return NextResponse.json(
+          { success: false, message: 'Please select at least one customer from the list.' },
+          { status: 400 }
+        );
+      }
 
-    // Fetch matching customers
-    const customers = await Customer.find(customerFilter).sort({ createdAt: -1 });
+      const customers = await Customer.find({ _id: { $in: selectedCustomerIds } }).sort({ fullname: 1 });
+      recipients = customers
+        .filter((c) => {
+          const digits = (c.contact || '').replace(/\D/g, '');
+          return digits.length >= 10;
+        })
+        .map((c) => {
+          const digits = c.contact.replace(/\D/g, '').slice(-10);
+          return {
+            customerId: c._id,
+            customerName: c.fullname,
+            contact: digits,
+            status: 'pending' as const,
+          };
+        });
 
-    if (!customers || customers.length === 0) {
-      return NextResponse.json(
-        { success: false, message: 'No registered customers found for the selected branch / filter.' },
-        { status: 400 }
-      );
+      if (recipients.length === 0) {
+        return NextResponse.json(
+          { success: false, message: 'None of the selected customers have a valid 10-digit mobile number.' },
+          { status: 400 }
+        );
+      }
+
+      targetLocationName = `👥 Selected Customers (${recipients.length})`;
     }
+    // Mode 3: By Branch / All Customers
+    else {
+      const customerFilter: Record<string, unknown> = {};
+      if (targetLocationId && targetLocationId !== 'all') {
+        customerFilter.locationId = targetLocationId;
+        const loc = await Location.findById(targetLocationId);
+        if (loc) {
+          targetLocationName = `${loc.name} (${loc.code})`;
+        }
+      }
 
-    // Filter valid 10-digit contacts and build recipients
-    const recipients = customers
-      .filter((c) => {
-        const digits = (c.contact || '').replace(/\D/g, '');
-        return digits.length >= 10;
-      })
-      .map((c) => {
-        const digits = c.contact.replace(/\D/g, '').slice(-10);
-        return {
-          customerId: c._id,
-          customerName: c.fullname,
-          contact: digits,
-          status: 'pending' as const,
-        };
-      });
+      const customers = await Customer.find(customerFilter).sort({ createdAt: -1 });
 
-    if (recipients.length === 0) {
-      return NextResponse.json(
-        { success: false, message: 'No customers with valid 10-digit mobile numbers found.' },
-        { status: 400 }
-      );
+      if (!customers || customers.length === 0) {
+        return NextResponse.json(
+          { success: false, message: 'No registered customers found for the selected branch / filter.' },
+          { status: 400 }
+        );
+      }
+
+      recipients = customers
+        .filter((c) => {
+          const digits = (c.contact || '').replace(/\D/g, '');
+          return digits.length >= 10;
+        })
+        .map((c) => {
+          const digits = c.contact.replace(/\D/g, '').slice(-10);
+          return {
+            customerId: c._id,
+            customerName: c.fullname,
+            contact: digits,
+            status: 'pending' as const,
+          };
+        });
+
+      if (recipients.length === 0) {
+        return NextResponse.json(
+          { success: false, message: 'No customers with valid 10-digit mobile numbers found.' },
+          { status: 400 }
+        );
+      }
     }
 
     const parsedBatchSize = Math.max(5, Math.min(500, Number(batchSize) || 100));

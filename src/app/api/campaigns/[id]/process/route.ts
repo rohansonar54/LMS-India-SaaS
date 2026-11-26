@@ -4,7 +4,7 @@ import { Campaign } from '@/models/Campaign';
 import { Setting } from '@/models/Setting';
 import { requireAuth } from '@/lib/auth-helpers';
 
-const DEFAULT_GATEWAY_URL = process.env.WHATSAPP_GATEWAY_URL || 'http://localhost:3001';
+const DEFAULT_GATEWAY_URL = 'https://whatsapp-gateway-vqk0.onrender.com';
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -71,9 +71,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ success: true, status: 'completed' });
     }
 
-    // Fetch Gateway URL
+    // Fetch Gateway configuration
     const setting = await Setting.findOne({ key: 'whatsapp_gateway' });
-    const gatewayUrl = (setting?.value as { url?: string })?.url || DEFAULT_GATEWAY_URL;
+    const config = (setting?.value as { url?: string; apiKey?: string; sessionId?: string }) || {};
+    const gatewayUrl = (config.url || DEFAULT_GATEWAY_URL).replace(/\/+$/, '');
+    const apiKey = config.apiKey || '';
+    const sessionId = config.sessionId || '';
 
     // Personalize message with customer's name
     const personalizedText = campaign.message
@@ -83,22 +86,88 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     let sendSuccess = false;
     let sendError: string | undefined;
 
-    try {
-      const waRes = await fetch(`${gatewayUrl}/send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          number: recipient.contact,
-          text: personalizedText,
-          imageUrl: campaign.imageUrl || undefined,
-        }),
-      });
+    // Format phone to standard WhatsApp JID
+    const cleanDigits = (recipient.contact || '').replace(/\D/g, '');
+    const fullNumber = cleanDigits.length === 10 ? `91${cleanDigits}` : cleanDigits;
+    const jid = `${fullNumber}@s.whatsapp.net`;
 
-      const waData = await waRes.json();
-      if (waRes.ok && waData.success) {
-        sendSuccess = true;
+    try {
+      if (apiKey) {
+        // WA-AKG API Gateway on Render
+        // Resolve session: match by sessionId, id, or name, prioritizing connected sessions
+        let targetSession = sessionId;
+        const sessRes = await fetch(`${gatewayUrl}/api/sessions`, {
+          headers: { 'X-API-Key': apiKey },
+        });
+        if (sessRes.ok) {
+          const sessData = await sessRes.json();
+          const list = Array.isArray(sessData.data) ? sessData.data : [];
+          const matched = targetSession
+            ? list.find(
+                (s: any) =>
+                  s.sessionId === targetSession ||
+                  s.id === targetSession ||
+                  s.name?.toLowerCase() === targetSession?.toLowerCase()
+              )
+            : null;
+          const active = matched || list.find((s: any) => s.status === 'CONNECTED') || list[0];
+          if (active) {
+            targetSession = active.sessionId;
+          }
+        }
+
+        if (!targetSession) {
+          throw new Error('No active WhatsApp session found on the gateway. Please connect in your gateway dashboard.');
+        }
+
+        const waEndpoint = `${gatewayUrl}/api/messages/${encodeURIComponent(targetSession)}/${encodeURIComponent(jid)}/send`;
+
+        const messagePayload = campaign.imageUrl
+          ? {
+              message: {
+                image: { url: campaign.imageUrl },
+                caption: personalizedText,
+              },
+            }
+          : {
+              message: {
+                text: personalizedText,
+              },
+            };
+
+        const waRes = await fetch(waEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': apiKey,
+          },
+          body: JSON.stringify(messagePayload),
+        });
+
+        const waData = await waRes.json();
+        if (waRes.ok && (waData.success || waData.status)) {
+          sendSuccess = true;
+        } else {
+          sendError = waData.message || waData.error || 'Gateway returned delivery error';
+        }
       } else {
-        sendError = waData.message || 'WhatsApp Gateway reported delivery failure';
+        // Fallback: Express microservice endpoint
+        const waRes = await fetch(`${gatewayUrl}/send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            number: recipient.contact,
+            text: personalizedText,
+            imageUrl: campaign.imageUrl || undefined,
+          }),
+        });
+
+        const waData = await waRes.json();
+        if (waRes.ok && waData.success) {
+          sendSuccess = true;
+        } else {
+          sendError = waData.message || 'WhatsApp Gateway reported delivery failure';
+        }
       }
     } catch (err: unknown) {
       sendError = (err as Error).message || 'Failed to connect to WhatsApp Gateway';

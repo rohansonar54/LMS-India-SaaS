@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface ICampaignRecipient {
-  customerId: mongoose.Types.ObjectId;
+  customerId?: mongoose.Types.ObjectId | null;
   customerName: string;
   contact: string;
   status: 'pending' | 'sent' | 'failed';
@@ -35,7 +35,7 @@ export interface ICampaign extends Document {
 
 const CampaignRecipientSchema = new Schema<ICampaignRecipient>(
   {
-    customerId: { type: Schema.Types.ObjectId, ref: 'Customer', required: true },
+    customerId: { type: Schema.Types.ObjectId, ref: 'Customer', required: false, default: null },
     customerName: { type: String, required: true },
     contact: { type: String, required: true },
     status: { type: String, enum: ['pending', 'sent', 'failed'], default: 'pending' },
